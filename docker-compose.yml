@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  application-service:
+    build:
+      context: ./application-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-myProdSecret}
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=applicationdb
+      - POSTGRES_USER=app_user
+      - POSTGRES_PASSWORD=StrongPassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge

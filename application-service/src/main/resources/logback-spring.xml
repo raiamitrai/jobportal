@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Print log messages to console in JSON format -->
+    <appender name="STDOUT" class="net.logstash.logback.appender.LoggingEventCompositeJsonEncoder">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <pattern>
+                    <pattern>"level":"%level","logger":"%logger","thread":"%thread"</pattern>
+                </pattern>
+                <mdc />
+                <stackTrace />
+            </providers>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <!-- Set correlationId if present in MDC -->
+    <springProperty name="correlationId" source="logging.correlation-id" defaultValue="-"/>
+</configuration>

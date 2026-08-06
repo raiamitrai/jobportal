@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B clean verify
+
+      - name: Build Docker image
+        run: |
+          docker build -t careonix/application-service:latest ./application-service
+
+      # Optional: push Docker image to registry (set DOCKER_USERNAME & DOCKER_PASSWORD secrets)
+      - name: Publish Docker image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          docker push careonix/application-service:latest
