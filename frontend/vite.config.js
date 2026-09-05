@@ -400,6 +400,8 @@ function sharedDataPlugin() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  root: path.resolve(__dirname),
+  publicDir: path.resolve(__dirname, 'public'),
   plugins: [react(), githubOAuthPlugin(), sharedDataPlugin()],
   server: {
     port: 3000,

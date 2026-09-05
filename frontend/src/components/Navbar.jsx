@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bell, LogOut, CheckCircle, Info, X, Sparkles, Menu, ChevronDown, ShieldCheck, UserCheck, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import careonixLogo from '../assets/careonix-logo-transparent.png';
 
 export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar }) {
   const { user, logout } = useAuth();
@@ -91,7 +92,7 @@ export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar 
           {/* Mobile Brand Logo */}
           <div className="mobile-brand-title" style={{ flexShrink: 0 }}>
             <img
-              src="/careonix-logo-transparent.png"
+              src={careonixLogo}
               alt="Careonix Logo"
               style={{ height: '30px', width: 'auto', objectFit: 'contain', display: 'block' }}
             />

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSettings } from '../utils/settingsManager';
+import careonixLogo from '../assets/careonix-logo-transparent.png';
 
 const GOOGLE_CLIENT_ID = '2829663012-gi9u6ejtn5n4ftb26l3ain40qsucv6t1.apps.googleusercontent.com';
 
@@ -1013,7 +1014,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
             {/* Authentic CAREONIX Brand Logo */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.2rem' }}>
               <img
-                src="/careonix-logo-transparent.png"
+                src={careonixLogo}
                 alt="CAREONIX Logo"
                 style={{
                   height: '40px',
@@ -1183,7 +1184,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
             {/* Mobile Brand Header */}
             <div className="login-mobile-brand">
               <img
-                src="/careonix-logo-transparent.png"
+                src={careonixLogo}
                 alt="CAREONIX Logo"
                 style={{
                   height: '36px',

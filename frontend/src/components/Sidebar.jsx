@@ -30,6 +30,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useNotifications } from '../context/NotificationContext';
+import careonixBrandLogo from '../assets/careonix-brand-logo.png';
 
 export default function Sidebar({ activeTab, setActiveTab, isOpen = false, onClose }) {
   const { user, logout } = useAuth();
@@ -134,11 +135,11 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen = false, onClo
           {/* Brand Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.25rem 1rem 0.25rem', borderBottom: `1px solid ${isAdmin ? '#1e293b' : '#f1f5f9'}`, marginBottom: '1.15rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', flex: 1 }}>
-              <div style={{ borderRadius: '14px', overflow: 'hidden', width: '100%' }}>
+              <div style={{ borderRadius: '14px', overflow: 'hidden', width: '100%', background: isAdmin ? '#ffffff' : 'transparent', padding: isAdmin ? '4px 8px' : '0' }}>
                 <img
-                  src="/careonix-brand-logo.png"
+                  src={careonixBrandLogo}
                   alt="CAREONIX Logo"
-                  style={{ width: '100%', maxHeight: '42px', objectFit: 'contain', display: 'block' }}
+                  style={{ width: '100%', maxHeight: '38px', objectFit: 'contain', display: 'block' }}
                 />
               </div>
               <div style={{ fontSize: '0.74rem', color: isAdmin ? '#818cf8' : '#7c3aed', fontWeight: '800', letterSpacing: '0.01em' }}>
