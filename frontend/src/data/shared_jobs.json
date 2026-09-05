@@ -1,0 +1,54 @@
+[
+  {
+    "id": 1788595578308,
+    "title": "python developer",
+    "company": "Softpro",
+    "location": "Bangalore, Karnataka",
+    "currency": "INR",
+    "salary": "₹8,00,000 - 18,00,000",
+    "type": "Part-time",
+    "experience": "3-5 Years",
+    "lastDateToApply": "2026-08-31",
+    "skills": [
+      "python",
+      "django",
+      "React",
+      "MySQL"
+    ],
+    "applicationMethod": "external",
+    "applyUrl": "https://jobs.google.com/about/",
+    "source": "jobs.google.com",
+    "logoUrl": null,
+    "verified": true,
+    "status": "PENDING",
+    "applications": 1,
+    "postedBy": "wifoben326@murkstar.com",
+    "postedDate": "Sep 5, 2026"
+  },
+  {
+    "id": 1787682817560,
+    "title": "java developer",
+    "company": "TATA",
+    "location": "Bangalore, Karnataka",
+    "currency": "INR",
+    "salary": "₹12,00,000 - 18,00,000",
+    "type": "Full-time",
+    "experience": "2-4 Yrs",
+    "lastDateToApply": "2026-08-31",
+    "skills": [
+      "Java",
+      "Spring Boot",
+      "React",
+      "MySQL"
+    ],
+    "applicationMethod": "external",
+    "applyUrl": "https://www.tcs.com/",
+    "source": "www.tcs.com",
+    "logoUrl": null,
+    "verified": true,
+    "status": "PENDING",
+    "applications": 1,
+    "postedBy": "serope7216@murkstar.com",
+    "postedDate": "Aug 26, 2026"
+  }
+]

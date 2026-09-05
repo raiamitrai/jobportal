@@ -1,0 +1,34 @@
+{
+  "plan-7d": {
+    "price": 499,
+    "originalPrice": null,
+    "maxJobPosts": 5,
+    "tagline": "Quick access for urgent hiring needs",
+    "popular": false,
+    "offerBadge": ""
+  },
+  "plan-30d": {
+    "price": 1999,
+    "originalPrice": null,
+    "maxJobPosts": 25,
+    "tagline": "Most popular for startups and scaling teams",
+    "popular": true,
+    "offerBadge": ""
+  },
+  "plan-90d": {
+    "price": 4999,
+    "originalPrice": null,
+    "maxJobPosts": 100,
+    "tagline": "Best value for continuous quarterly hiring",
+    "popular": false,
+    "offerBadge": ""
+  },
+  "plan-365d": {
+    "price": 149,
+    "originalPrice": 14999,
+    "maxJobPosts": 999,
+    "tagline": "Complete year-round recruitment solution",
+    "popular": false,
+    "offerBadge": ""
+  }
+}

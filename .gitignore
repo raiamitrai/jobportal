@@ -1,0 +1,86 @@
+# ==========================================
+# CAREONIX Job Portal - Master .gitignore
+# ==========================================
+
+# --- Environment & Security (CRITICAL) ---
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.p12
+*.keystore
+secrets/
+
+# --- Node & Frontend Dependencies ---
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Frontend Build Outputs ---
+frontend/dist/
+frontend/build/
+**/dist/
+**/build/
+.vite/
+
+# --- Java & Maven Build Outputs ---
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Bundled standalone Maven binaries (use system maven or wrapper)
+backend/maven/
+apache-maven-*/
+
+# --- IDEs and Text Editors ---
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.factorypath
+
+# --- Operating System Files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# --- Logs & Runtime Data ---
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# --- Testing & Coverage ---
+coverage/
+.nyc_output/
+
+# --- Temporary Files ---
+tmp/
+temp/
+scratch/

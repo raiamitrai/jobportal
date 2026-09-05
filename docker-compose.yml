@@ -1,20 +1,59 @@
-version: '3.8'
-
 services:
+  # Service Discovery Server (Eureka)
+  eureka-server:
+    build:
+      context: ./backend/eureka-server
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    networks:
+      - app-network
+
+  # React Web Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3007:80"
+      - "3010:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - app-network
+
+  # Central API Gateway
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks:
+      - app-network
+
+  # Application (main) service
   application-service:
     build:
-      context: ./application-service
+      context: ./backend/application-service
       dockerfile: Dockerfile
     ports:
       - "8083:8083"
     environment:
       - JWT_SECRET=${JWT_SECRET:-myProdSecret}
       - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
     depends_on:
       - postgres
+      - eureka-server
     networks:
       - app-network
 
+  # PostgreSQL for application-service
   postgres:
     image: postgres:15-alpine
     environment:
@@ -28,8 +67,152 @@ services:
     networks:
       - app-network
 
+  interview-service:
+    build:
+      context: ./backend/interview-service
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    networks:
+      - app-network
+
+  job-service:
+    build:
+      context: ./backend/job-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/jobportal_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-Amitrai1001@}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    networks:
+      - app-network
+
+  profile-service:
+    build:
+      context: ./backend/profile-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/jobportal_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-Amitrai1001@}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - app-network
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app-network
+
+  notification-service:
+    build:
+      context: ./backend/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8086"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - rabbitmq
+      - mailhog
+      - eureka-server
+    environment:
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST:-smtp.gmail.com}
+      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-587}
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-careonixteam@gmail.com}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD:-}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/jobportal_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-Amitrai1001@}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    networks:
+      - app-network
+
+  # MySQL for subscription-service & backend microservices
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: subscriptiondb
+      MYSQL_USER: sub_user
+      MYSQL_PASSWORD: SubPass123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Amitrai1001@}
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysqldata:/var/lib/mysql
+    networks:
+      - app-network
+
+  subscription-service:
+    build:
+      context: ./backend/subscription-service
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/subscriptiondb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-Amitrai1001@}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      - rabbitmq
+      - eureka-server
+    networks:
+      - app-network
+
+  # phpMyAdmin for automatic Database visualization
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8085:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
 volumes:
   pgdata:
+  mysqldata:
 
 networks:
   app-network:

@@ -1,0 +1,196 @@
+[
+  {
+    "id": "thread-admin-jalagob793_airhemp_com",
+    "type": "recruiter_admin",
+    "recruiterEmail": "jalagob793@airhemp.com",
+    "recruiterName": "Krishna",
+    "companyName": "Candidate Account",
+    "adminEmail": "admin@careonix.com",
+    "adminName": "CAREONIX System Admin",
+    "messages": [
+      {
+        "id": "ma-init-1788597844243",
+        "sender": "admin",
+        "senderEmail": "admin@careonix.com",
+        "text": "👋 Welcome to CAREONIX Support Channel! How can System Admin assist your recruitment team today?",
+        "time": "02:14 PM",
+        "timestamp": 1788597844243
+      },
+      {
+        "id": "msg-1788601062931-h40r74",
+        "sender": "candidate",
+        "senderEmail": "jalagob793@airhemp.com",
+        "text": "ki haal chal",
+        "time": "03:07 PM",
+        "timestamp": 1788601062931
+      }
+    ],
+    "unreadCounts": {
+      "candidate": 0,
+      "recruiter": 1,
+      "admin": 0
+    },
+    "updatedAt": 1788601062931
+  },
+  {
+    "id": "thread_jalagob793_airhemp_com_wifoben326_murkstar_com_1788595578308",
+    "type": "candidate_recruiter",
+    "candidateEmail": "jalagob793@airhemp.com",
+    "candidateName": "Krishna",
+    "candidateAvatar": "",
+    "recruiterEmail": "wifoben326@murkstar.com",
+    "recruiterName": "Rohit",
+    "companyName": "Softpro",
+    "jobId": "1788595578308",
+    "jobTitle": "python developer",
+    "messages": [
+      {
+        "id": "m-init-1788597036087",
+        "sender": "system",
+        "senderEmail": "system",
+        "text": "🎉 Chat initialized for application \"python developer\" at Softpro.",
+        "time": "02:00 PM",
+        "timestamp": 1788597036087
+      },
+      {
+        "id": "m-init-1788597036125",
+        "sender": "system",
+        "senderEmail": "system",
+        "text": "🎉 Chat initialized for application \"python developer\" at Softpro.",
+        "time": "02:00 PM",
+        "timestamp": 1788597036125
+      },
+      {
+        "id": "msg-test-1788597187742",
+        "sender": "candidate",
+        "senderEmail": "jalagob793@airhemp.com",
+        "text": "Hello Rohit, I have submitted my resume for Python Developer!",
+        "time": "02:05 PM",
+        "timestamp": 1788597187742
+      },
+      {
+        "id": "msg-rec-reply-1788597217775",
+        "sender": "recruiter",
+        "senderEmail": "wifoben326@murkstar.com",
+        "text": "Hi Krishna, thanks for applying! Your profile looks great. Can you attend a technical screening tomorrow at 11 AM?",
+        "time": "02:06 PM",
+        "timestamp": 1788597217775
+      },
+      {
+        "id": "msg-1788597389144-swz8eo",
+        "sender": "candidate",
+        "senderEmail": "jalagob793@airhemp.com",
+        "text": "hiiii",
+        "time": "02:06 PM",
+        "timestamp": 1788597389144
+      },
+      {
+        "id": "msg-1788597408477-njtehq",
+        "sender": "candidate",
+        "senderEmail": "jalagob793@airhemp.com",
+        "text": "hellooooooo",
+        "time": "02:06 PM",
+        "timestamp": 1788597408477
+      },
+      {
+        "id": "msg-1788597414468-tjc8ra",
+        "sender": "recruiter",
+        "senderEmail": "wifoben326@murkstar.com",
+        "text": "bukuut",
+        "time": "02:06 PM",
+        "timestamp": 1788597414468
+      }
+    ],
+    "unreadCounts": {
+      "candidate": 0,
+      "recruiter": 0,
+      "admin": 0
+    },
+    "updatedAt": 1788597414468
+  },
+  {
+    "id": "thread_jalagob793_airhemp_com_serope7216_murkstar_com_1787682817560",
+    "type": "candidate_recruiter",
+    "candidateEmail": "jalagob793@airhemp.com",
+    "candidateName": "Krishna",
+    "candidateAvatar": "",
+    "recruiterEmail": "serope7216@murkstar.com",
+    "recruiterName": "serope7216",
+    "companyName": "TATA",
+    "jobId": "1787682817560",
+    "jobTitle": "java developer",
+    "messages": [
+      {
+        "id": "m-init-1788597301885",
+        "sender": "system",
+        "senderEmail": "system",
+        "text": "🎉 Chat initialized for application \"java developer\" at TATA.",
+        "time": "02:05 PM",
+        "timestamp": 1788597301885
+      },
+      {
+        "id": "m-init-1788597301929",
+        "sender": "system",
+        "senderEmail": "system",
+        "text": "🎉 Chat initialized for application \"java developer\" at TATA.",
+        "time": "02:05 PM",
+        "timestamp": 1788597301929
+      }
+    ],
+    "unreadCounts": {
+      "candidate": 0,
+      "recruiter": 0,
+      "admin": 0
+    },
+    "updatedAt": 1788597301929
+  },
+  {
+    "id": "thread-admin-wifoben326_murkstar_com",
+    "type": "recruiter_admin",
+    "recruiterEmail": "wifoben326@murkstar.com",
+    "recruiterName": "Rohit",
+    "companyName": "Softpro",
+    "adminEmail": "admin@careonix.com",
+    "adminName": "CAREONIX System Admin",
+    "messages": [
+      {
+        "id": "ma-init-1788595929299",
+        "sender": "admin",
+        "senderEmail": "admin@careonix.com",
+        "text": "👋 Welcome to CAREONIX Support Channel! How can System Admin assist your recruitment team today?",
+        "time": "01:42 PM",
+        "timestamp": 1788595929300
+      },
+      {
+        "id": "msg-1788595933931-rvn1",
+        "sender": "recruiter",
+        "senderEmail": "wifoben326@murkstar.com",
+        "text": "hello",
+        "time": "01:42 PM",
+        "timestamp": 1788595933931
+      },
+      {
+        "id": "msg-1788595971961-2mxi",
+        "sender": "recruiter",
+        "senderEmail": "wifoben326@murkstar.com",
+        "text": "help server error",
+        "time": "01:42 PM",
+        "timestamp": 1788595971961
+      },
+      {
+        "id": "msg-1788595990660-o1tg",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "ok wait i will check",
+        "time": "01:43 PM",
+        "timestamp": 1788595990660
+      }
+    ],
+    "unreadCounts": {
+      "candidate": 3,
+      "recruiter": 0,
+      "admin": 0
+    },
+    "updatedAt": 1788595990660
+  }
+]

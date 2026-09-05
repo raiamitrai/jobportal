@@ -1,0 +1,89 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3007"
+              - "http://localhost:3010"
+              - "http://localhost:5173"
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+              - HEAD
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - "Authorization"
+              - "Content-Type"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: subscription-service
+          uri: lb://SUBSCRIPTION-SERVICE
+          predicates:
+            - Path=/subscriptions/**, /api/subscriptions/**
+
+        - id: application-service
+          uri: lb://APPLICATION-SERVICE
+          predicates:
+            - Path=/applications/**, /api/applications/**
+
+        - id: job-service
+          uri: lb://JOB-SERVICE
+          predicates:
+            - Path=/jobs/**, /api/jobs/**
+
+        - id: profile-service
+          uri: lb://PROFILE-SERVICE
+          predicates:
+            - Path=/profiles/**, /api/profiles/**
+
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/notifications/**, /api/notifications/**
+
+        - id: auth-service
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**, /api/auth/**
+
+        - id: interview-service
+          uri: lb://INTERVIEW-SERVICE
+          predicates:
+            - Path=/interviews/**, /api/interviews/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: always
+

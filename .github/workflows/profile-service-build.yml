@@ -1,0 +1,30 @@
+name: Build & Test Profile Service
+
+on:
+  push:
+    paths:
+      - 'backend/profile-service/**'
+  pull_request:
+    paths:
+      - 'backend/profile-service/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/profile-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: mvn -B clean verify -DskipTests
+
+      - name: Build Docker image
+        run: docker build -t careonix/profile-service .

@@ -1,0 +1,22 @@
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: careonixteam@gmail.com
+    password: pvdukyixkhaughoo
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+notification:
+  exchange: notification.exchange
+  queue: notification.queue
+  routing-key: notification.key
