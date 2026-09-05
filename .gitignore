@@ -51,6 +51,7 @@ apache-maven-*/
 # --- IDEs and Text Editors ---
 .vscode/
 .idea/
+.agents/
 *.iml
 *.ipr
 *.iws
