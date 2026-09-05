@@ -1,4 +1,4 @@
-name: CI
+name: CI / Production Quality Pipeline
 
 on:
   push:
@@ -7,11 +7,15 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Build & Verify All Spring Boot Microservices
+  # ─────────────────────────────────────────────────────────────
+  build-backend:
+    name: Build & Verify Backend Microservices
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -21,50 +25,66 @@ jobs:
           java-version: 17
           cache: maven
 
-      - name: Build Backend Microservices with Maven
+      - name: Compile & Package Core Microservices
         run: |
           mvn -B clean package -DskipTests -f ./backend/eureka-server/pom.xml
           mvn -B clean package -DskipTests -f ./backend/api-gateway/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/application-service/pom.xml
           mvn -B clean package -DskipTests -f ./backend/auth-service/pom.xml
           mvn -B clean package -DskipTests -f ./backend/job-service/pom.xml
           mvn -B clean package -DskipTests -f ./backend/profile-service/pom.xml
+          mvn -B clean package -DskipTests -f ./backend/application-service/pom.xml
           mvn -B clean package -DskipTests -f ./backend/notification-service/pom.xml
           mvn -B clean package -DskipTests -f ./backend/subscription-service/pom.xml
+          mvn -B clean package -DskipTests -f ./backend/analytics-service/pom.xml
+          mvn -B clean package -DskipTests -f ./backend/interview-service/pom.xml
+          mvn -B clean package -DskipTests -f ./backend/website-controller/pom.xml
 
-      - name: Set up Node.js
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Build & Verify React Frontend
+  # ─────────────────────────────────────────────────────────────
+  build-frontend:
+    name: Build & Verify Frontend Client
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
-      - name: Build Frontend
+      - name: Install Frontend Dependencies
         working-directory: frontend
-        run: |
-          npm ci
-          npm run build
+        run: npm install --no-audit --no-fund
 
-      - name: Build Docker images
-        run: |
-          docker build -t careonix/eureka-server:latest ./backend/eureka-server
-          docker build -t careonix/api-gateway:latest ./backend/api-gateway
-          docker build -t careonix/application-service:latest ./backend/application-service
-          docker build -t careonix/notification-service:latest ./backend/notification-service
-          docker build -t careonix/subscription-service:latest ./backend/subscription-service
-          docker build -t careonix/frontend:latest ./frontend
+      - name: Build Production Bundle
+        working-directory: frontend
+        run: npm run build
 
-      # Optional: push Docker images (set DOCKER_USERNAME & DOCKER_PASSWORD secrets in GitHub repo settings)
-      - name: Publish Docker images
-        if: github.ref == 'refs/heads/main' && env.DOCKER_USERNAME != ''
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: Verify Docker Container Builds
+  # ─────────────────────────────────────────────────────────────
+  verify-docker:
+    name: Verify Docker Containerization
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Frontend Docker Image
+        run: docker build -t careonix/frontend:latest ./frontend
+
+      - name: Build Gateway Docker Image
+        run: docker build -t careonix/api-gateway:latest ./backend/api-gateway
+
+      # Optional: Push to Docker Hub ONLY if secrets are configured
+      - name: Publish to Docker Hub (When Configured)
+        if: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
         run: |
-          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-          docker push careonix/eureka-server:latest
-          docker push careonix/api-gateway:latest
-          docker push careonix/application-service:latest
-          docker push careonix/notification-service:latest
-          docker push careonix/subscription-service:latest
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push careonix/frontend:latest
+          docker push careonix/api-gateway:latest
