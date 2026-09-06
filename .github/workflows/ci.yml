@@ -27,17 +27,17 @@ jobs:
 
       - name: Compile & Package Core Microservices
         run: |
-          mvn -B clean package -DskipTests -f ./backend/eureka-server/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/api-gateway/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/auth-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/job-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/profile-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/application-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/notification-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/subscription-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/analytics-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/interview-service/pom.xml
-          mvn -B clean package -DskipTests -f ./backend/website-controller/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/eureka-server/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/api-gateway/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/auth-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/job-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/profile-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/application-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/notification-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/subscription-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/analytics-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/interview-service/pom.xml
+          mvn -B clean package -Dmaven.test.skip=true -f ./backend/website-controller/pom.xml
 
   # ─────────────────────────────────────────────────────────────
   # Job 2: Build & Verify React Frontend

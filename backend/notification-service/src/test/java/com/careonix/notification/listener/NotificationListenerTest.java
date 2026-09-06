@@ -88,7 +88,7 @@ class NotificationListenerTest {
 
         // then: wait a short time for listener to process
         try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
-        verify(javaMailSender, times(1)).send(any());
+        verify(javaMailSender, times(1)).send((org.springframework.mail.SimpleMailMessage) any());
         verify(smsSender, never()).sendSms(anyString(), anyString());
     }
 
@@ -107,6 +107,6 @@ class NotificationListenerTest {
 
         try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
         verify(smsSender, times(1)).sendSms(eq("+1234567890"), eq("OTP code"));
-        verify(javaMailSender, never()).send(any());
+        verify(javaMailSender, never()).send((org.springframework.mail.SimpleMailMessage) any());
     }
 }
