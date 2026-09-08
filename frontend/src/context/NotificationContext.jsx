@@ -10,8 +10,13 @@ export function NotificationProvider({ children }) {
       const saved = localStorage.getItem('careonix_central_notifications');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // ── Purge old seed/demo notifications and any verification code OTPs ──
-        const cleaned = parsed.filter(n => !n.id?.startsWith('notif_seed_') && !n.title?.includes('Verification Code'));
+        // ── Purge old seed/demo notifications, OTPs, and direct chat messages (chat belongs strictly to Messages tab) ──
+        const cleaned = parsed.filter(n => 
+          !n.id?.startsWith('notif_seed_') && 
+          !n.title?.includes('Verification Code') &&
+          n.type !== 'NEW_MESSAGE' &&
+          !n.title?.includes('New Message')
+        );
         // Re-save if any seeds were removed
         if (cleaned.length !== parsed.length) {
           localStorage.setItem('careonix_central_notifications', JSON.stringify(cleaned));
@@ -92,6 +97,8 @@ export function NotificationProvider({ children }) {
     if (item.type === 'STATUS_CHANGE' && notifSettings.statusChange === false) return null;
     if (item.type === 'JOB_POSTED' && notifSettings.jobModeration === false) return null;
     if (item.type === 'ADMIN_ALERT' && notifSettings.recruiterSignup === false) return null;
+    // Direct chat/text messages belong exclusively to chat threads/Messages tab, never in notifications
+    if (item.type === 'NEW_MESSAGE' || item.title?.includes('New Message')) return null;
 
     const now = Date.now();
     const newNotif = {
@@ -319,20 +326,12 @@ export function NotificationProvider({ children }) {
   };
 
   // ----------------------------------------------------
-  // FLOW 6: User <-> User (New Direct Message Notification)
+  // FLOW 6: User <-> User Direct Chat Messages
+  // Chat messages belong exclusively to the Messages tab, NOT the notification center.
   // ----------------------------------------------------
-  const notifyNewMessage = ({ recipientEmail, recipientRole, senderName, senderEmail, messageText, threadId }) => {
-    if (!recipientEmail) return;
-    addNotification({
-      recipientRole: recipientRole || 'candidate',
-      recipientEmail: (recipientEmail || '').toLowerCase().trim(),
-      title: `💬 New Message from ${senderName || senderEmail}`,
-      message: messageText?.length > 80 ? `${messageText.slice(0, 80)}...` : messageText,
-      type: 'NEW_MESSAGE',
-      channel: 'BELL',
-      sender: senderName || senderEmail,
-      threadId
-    });
+  const notifyNewMessage = () => {
+    // Direct chat messages are handled purely inside chat threads/Messages tab
+    return null;
   };
 
   // Mark single notification as read
@@ -358,6 +357,9 @@ export function NotificationProvider({ children }) {
   const getNotificationsForUser = (userEmail, userRole) => {
     const cleanEmail = (userEmail || '').toLowerCase().trim();
     return notifications.filter(n => {
+      // Direct text/chat messages belong strictly to Messages tab, not the notification center
+      if (n.type === 'NEW_MESSAGE' || n.title?.includes('New Message')) return false;
+
       // Admin sees all system notifications
       if (userRole === 'admin') return true;
 

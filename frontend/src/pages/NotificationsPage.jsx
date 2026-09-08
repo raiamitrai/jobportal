@@ -35,6 +35,9 @@ export default function NotificationsPage({ role }) {
   };
 
   const filteredNotifications = notifications.filter(n => {
+    // Direct text/chat messages belong strictly to Messages tab, never in notifications
+    if (n.type === 'NEW_MESSAGE' || n.title?.includes('New Message')) return false;
+
     // Filter by Tab
     if (activeFilterTab === 'UNREAD' && n.read) return false;
     if (activeFilterTab === 'STATUS' && n.type !== 'STATUS_CHANGE' && n.type !== 'EXTERNAL_STATUS_UPDATE') return false;

@@ -62,8 +62,8 @@ export default function AdminNotificationsPage() {
   // Auto-refresh dynamic timestamps every 30 seconds
   useRelativeTimeTick(30000);
 
-  // Merge central notifications from NotificationContext + any local broadcasts
-  const allNotifList = [...(centralNotifs || []), ...localSent];
+  // Merge central notifications from NotificationContext + any local broadcasts (excluding direct chat messages)
+  const allNotifList = [...(centralNotifs || []), ...localSent].filter(n => n && n.type !== 'NEW_MESSAGE' && !n.title?.includes('New Message'));
 
   const formattedNotifications = allNotifList.map((n, idx) => {
     return {

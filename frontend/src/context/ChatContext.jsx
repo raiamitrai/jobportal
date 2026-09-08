@@ -44,7 +44,6 @@ const mergeThreads = (existingList = [], incomingList = []) => {
 export function ChatProvider({ children }) {
   const { user } = useAuth();
   const { jobs, applications } = useJobs();
-  const { notifyNewMessage } = useNotifications();
 
   const [activeThreadId, setActiveThreadId] = useState(() => {
     try {
@@ -532,38 +531,6 @@ export function ChatProvider({ children }) {
     });
 
     saveThreads(updatedThreads);
-
-    // Trigger in-app notification to the recipient
-    if (targetThread && notifyNewMessage) {
-      if (senderRole === 'candidate') {
-        notifyNewMessage({
-          recipientEmail: targetThread.recruiterEmail,
-          recipientRole: 'recruiter',
-          senderName: targetThread.candidateName || user?.name || cleanSenderEmail,
-          senderEmail: cleanSenderEmail,
-          messageText: cleanText || 'Sent an attachment',
-          threadId: targetThread.id
-        });
-      } else if (senderRole === 'recruiter') {
-        notifyNewMessage({
-          recipientEmail: targetThread.candidateEmail,
-          recipientRole: 'candidate',
-          senderName: targetThread.companyName || targetThread.recruiterName || user?.name || cleanSenderEmail,
-          senderEmail: cleanSenderEmail,
-          messageText: cleanText || 'Sent an attachment',
-          threadId: targetThread.id
-        });
-      } else if (senderRole === 'admin') {
-        notifyNewMessage({
-          recipientEmail: targetThread.recruiterEmail || targetThread.candidateEmail,
-          recipientRole: targetThread.recruiterEmail ? 'recruiter' : 'candidate',
-          senderName: 'CAREONIX Support Admin',
-          senderEmail: 'admin@careonix.com',
-          messageText: cleanText || 'Sent an attachment',
-          threadId: targetThread.id
-        });
-      }
-    }
   };
 
   return (
