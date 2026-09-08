@@ -43,6 +43,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobContext';
+import {
+  detectClientDeviceInfo,
+  getLoginHistory,
+  clearOtherSessions,
+  exportLoginHistoryCSV,
+  isTwoFactorEnabled,
+  setTwoFactorEnabledState
+} from '../utils/loginActivityUtils';
 
 export default function RecruiterSettingsPage() {
   const { user, logout, updateUserProfileName, updateUserAvatar } = useAuth();
@@ -148,12 +156,15 @@ export default function RecruiterSettingsPage() {
   const [marketingTips, setMarketingTips] = useState(() => getStorageJson('marketingTips', false));
 
   // ── TAB 3: Privacy & Security State ──
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => getStorageJson('2fa_enabled', false));
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => isTwoFactorEnabled(userEmail));
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorModalError, setTwoFactorModalError] = useState('');
   const [sessionTimeout, setSessionTimeout] = useState(() => getStorageJson('sessionTimeout', '30 Minutes'));
   const [showActiveSessionsModal, setShowActiveSessionsModal] = useState(false);
   const [showLoginActivityModal, setShowLoginActivityModal] = useState(false);
+  const [loginLogs, setLoginLogs] = useState(() => getLoginHistory(userEmail));
+  const [currentDeviceInfo] = useState(() => detectClientDeviceInfo());
 
   // ── TAB 4: Job Preferences State ──
   const [jobPrefs, setJobPrefs] = useState(() => getStorageJson('jobPrefs', {
@@ -1073,8 +1084,11 @@ export default function RecruiterSettingsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => triggerToast('Login audit log exported.')}
-                style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '4px 10px', fontSize: '0.78rem', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => {
+                  exportLoginHistoryCSV(userEmail, loginLogs);
+                  triggerToast('📥 Real Login audit log CSV exported successfully!');
+                }}
+                style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: '700', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
               >
                 <Download size={13} /> Export Log
               </button>
@@ -1093,29 +1107,43 @@ export default function RecruiterSettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { device: 'Windows PC (11)', browser: 'Chrome 128.0', ip: '103.21.124.5', loc: 'Bengaluru, India', time: 'Active Now', status: 'Current Session' },
-                    { device: 'Android Smartphone', browser: 'Chrome Mobile', ip: '49.37.18.92', loc: 'Bengaluru, India', time: 'Yesterday 4:15 PM', status: 'Success' },
-                    { device: 'MacBook Pro', browser: 'Safari 17.4', ip: '106.51.72.19', loc: 'Mumbai, India', time: 'Sep 06, 2026', status: 'Success' }
-                  ].map((log, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '0.75rem 0', fontWeight: '700', color: '#0f172a' }}>{log.device}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{log.browser}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontFamily: 'monospace' }}>{log.ip}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{log.loc}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>{log.time}</td>
-                      <td style={{ padding: '0.75rem 0', textAlign: 'right' }}>
-                        <span style={{
-                          background: log.status === 'Current Session' ? '#dcfce7' : '#f1f5f9',
-                          color: log.status === 'Current Session' ? '#15803d' : '#475569',
-                          border: `1px solid ${log.status === 'Current Session' ? '#bbf7d0' : '#cbd5e1'}`,
-                          padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800'
-                        }}>
-                          {log.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {loginLogs.map((log, i) => {
+                    const isCurrent = log.status === 'Current Session';
+                    const isMobile = (log.device || '').toLowerCase().includes('phone') || (log.device || '').toLowerCase().includes('android');
+                    return (
+                      <tr key={log.id || i} style={{ borderBottom: '1px solid #f8fafc', background: isCurrent ? '#f8fafc88' : 'transparent' }}>
+                        <td style={{ padding: '0.75rem 0', fontWeight: '700', color: '#0f172a' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {isMobile ? <Smartphone size={15} color="#6366f1" /> : <Laptop size={15} color="#6366f1" />}
+                            <span>{log.device}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{log.browser}</td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#64748b', fontFamily: 'monospace' }}>{log.ip}</td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>{log.loc}</td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
+                          {isCurrent ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#15803d', fontWeight: '700' }}>
+                              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 0 2px #bbf7d0' }} />
+                              Active Now
+                            </span>
+                          ) : (
+                            log.time || (log.timestamp ? new Date(log.timestamp).toLocaleDateString() : 'Recent')
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 0', textAlign: 'right' }}>
+                          <span style={{
+                            background: isCurrent ? '#dcfce7' : '#f1f5f9',
+                            color: isCurrent ? '#15803d' : '#475569',
+                            border: `1px solid ${isCurrent ? '#bbf7d0' : '#cbd5e1'}`,
+                            padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800'
+                          }}>
+                            {log.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1671,22 +1699,34 @@ export default function RecruiterSettingsPage() {
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: '6px', lineHeight: '1.5' }}>
               {twoFactorEnabled
-                ? 'Disabling 2FA reduces your account defense score against unauthorized access.'
-                : 'Protect your candidate data and recruiter portal using Google Authenticator or SMS OTP.'}
+                ? 'Disabling 2FA removes the 6-digit security code challenge from your recruiter sign-in.'
+                : 'Protect your candidate data and recruiter portal with 2FA verification on every sign-in.'}
             </p>
 
+            {twoFactorModalError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.5rem 0.8rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '700', marginTop: '0.75rem' }}>
+                {twoFactorModalError}
+              </div>
+            )}
+
             {!twoFactorEnabled && (
-              <div style={{ margin: '1.25rem 0', background: '#f8fafc', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '700', marginBottom: '8px' }}>
-                  Authenticator Setup Key: <span style={{ fontFamily: 'monospace', color: '#4f46e5' }}>CRNX-8942-AUTH</span>
+              <div style={{ margin: '1.25rem 0', background: '#f8fafc', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '700', marginBottom: '6px' }}>
+                  Authenticator Setup Key: <span style={{ fontFamily: 'monospace', color: '#4f46e5', fontWeight: '800' }}>CRNX-8942-AUTH</span>
                 </div>
+                <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 10px 0' }}>
+                  Enter code <strong style={{ color: '#0f172a' }}>123456</strong> or your Authenticator 6-digit OTP below to verify and activate:
+                </p>
                 <input
                   type="text"
                   maxLength={6}
                   value={twoFactorCode}
-                  onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter 6-digit OTP (e.g. 123456)"
-                  style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.2em', fontSize: '1.1rem', fontWeight: '800' }}
+                  onChange={e => {
+                    setTwoFactorModalError('');
+                    setTwoFactorCode(e.target.value.replace(/\D/g, ''));
+                  }}
+                  placeholder="123456"
+                  style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.25em', fontSize: '1.15rem', fontWeight: '800' }}
                 />
               </div>
             )}
@@ -1694,7 +1734,10 @@ export default function RecruiterSettingsPage() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
               <button
                 type="button"
-                onClick={() => setShow2FAModal(false)}
+                onClick={() => {
+                  setShow2FAModal(false);
+                  setTwoFactorModalError('');
+                }}
                 style={{ padding: '0.7rem 1.4rem', borderRadius: '10px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
               >
                 Cancel
@@ -1702,11 +1745,22 @@ export default function RecruiterSettingsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const nextState = !twoFactorEnabled;
-                  setTwoFactorEnabled(nextState);
-                  setStorageJson('2fa_enabled', nextState);
-                  setShow2FAModal(false);
-                  triggerToast(nextState ? '🎉 2FA Security enabled successfully!' : '2FA Security disabled.');
+                  if (twoFactorEnabled) {
+                    setTwoFactorEnabled(false);
+                    setTwoFactorEnabledState(userEmail, false);
+                    setShow2FAModal(false);
+                    triggerToast('2FA Security disabled.');
+                  } else {
+                    if (!twoFactorCode || twoFactorCode.length < 6) {
+                      setTwoFactorModalError('⚠️ Please enter the 6-digit code (e.g. 123456).');
+                      return;
+                    }
+                    setTwoFactorEnabled(true);
+                    setTwoFactorEnabledState(userEmail, true);
+                    setShow2FAModal(false);
+                    setTwoFactorCode('');
+                    triggerToast('🎉 2FA Security enabled successfully! Future logins will require this code.');
+                  }
                 }}
                 style={{
                   padding: '0.7rem 1.6rem', borderRadius: '10px',
@@ -1737,8 +1791,8 @@ export default function RecruiterSettingsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <Laptop size={22} color="#6366f1" />
                   <div>
-                    <strong style={{ fontSize: '0.86rem', color: '#0f172a', display: 'block' }}>Windows PC (Chrome 128.0)</strong>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>IP: 103.21.124.5 &bull; Bengaluru, India</span>
+                    <strong style={{ fontSize: '0.86rem', color: '#0f172a', display: 'block' }}>{currentDeviceInfo.device} ({currentDeviceInfo.browser})</strong>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>IP: {currentDeviceInfo.ip} &bull; {currentDeviceInfo.location}</span>
                   </div>
                 </div>
                 <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 9px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: '800' }}>Current Device</span>
@@ -1748,7 +1802,12 @@ export default function RecruiterSettingsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
               <button
                 type="button"
-                onClick={() => { setShowActiveSessionsModal(false); triggerToast('Logged out of all other remote devices.'); }}
+                onClick={() => {
+                  const cleaned = clearOtherSessions(userEmail);
+                  setLoginLogs(cleaned);
+                  setShowActiveSessionsModal(false);
+                  triggerToast('✅ Logged out of all other remote devices.');
+                }}
                 style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.6rem 1.1rem', borderRadius: '10px', fontSize: '0.82rem', fontWeight: '800', cursor: 'pointer' }}
               >
                 Log Out Other Devices

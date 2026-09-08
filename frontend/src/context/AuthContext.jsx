@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { recordLoginEvent } from '../utils/loginActivityUtils';
 
 const AuthContext = createContext(null);
 
@@ -541,6 +542,12 @@ export function AuthProvider({ children }) {
     };
 
     setUser(userData);
+
+    if (email) {
+      try {
+        recordLoginEvent(email);
+      } catch (e) {}
+    }
 
     // Tab-Isolated Storage: Save strictly to sessionStorage per tab
     // Also clear any stale view override so role always reflects real credentials

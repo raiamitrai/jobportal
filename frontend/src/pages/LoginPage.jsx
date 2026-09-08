@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   User, Building, Lock, Mail, Eye, EyeOff,
   CheckCircle2, AlertCircle, Smartphone, RefreshCw,
-  KeyRound, ShieldCheck, ArrowLeft, Users, ChevronRight
+  KeyRound, ShieldCheck, ArrowLeft, Users, ChevronRight, Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSettings } from '../utils/settingsManager';
+import { isTwoFactorEnabled, recordLoginEvent } from '../utils/loginActivityUtils';
 import careonixLogo from '../assets/careonix-logo-transparent.png';
 import loginIllustration from '../assets/login-3d-transparent.png';
 
@@ -74,6 +75,15 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
+  // ── TWO-FACTOR AUTHENTICATION (2FA) LOGIN STATES ─────────
+  const [show2FALoginModal, setShow2FALoginModal] = useState(false);
+  const [pending2FAUser, setPending2FAUser] = useState(null);
+  const [twoFactorDigits, setTwoFactorDigits] = useState(['', '', '', '', '', '']);
+  const [twoFactorExpectedCode, setTwoFactorExpectedCode] = useState('123456');
+  const [twoFactorLoginTimer, setTwoFactorLoginTimer] = useState(60);
+  const [twoFactorLoginError, setTwoFactorLoginError] = useState('');
+  const [twoFactorVerifying, setTwoFactorVerifying] = useState(false);
+
   // Social & OAuth SSO states
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
@@ -117,6 +127,62 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
     }
     return () => clearInterval(interval);
   }, [showForgotModal, forgotStep, forgotTimer]);
+
+  // ── 2FA Login OTP timer ────────────────────────────────────
+  useEffect(() => {
+    let interval = null;
+    if (show2FALoginModal && twoFactorLoginTimer > 0) {
+      interval = setInterval(() => setTwoFactorLoginTimer(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [show2FALoginModal, twoFactorLoginTimer]);
+
+  const handle2FADigitInput = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const updated = [...twoFactorDigits];
+    updated[index] = value;
+    setTwoFactorDigits(updated);
+    setTwoFactorLoginError('');
+    if (value && index < 5) {
+      document.getElementById(`twofa-input-${index + 1}`)?.focus();
+    }
+  };
+
+  const handle2FAKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !twoFactorDigits[index] && index > 0) {
+      document.getElementById(`twofa-input-${index - 1}`)?.focus();
+    }
+  };
+
+  const handleVerify2FALogin = () => {
+    const entered = twoFactorDigits.join('');
+    if (entered.length < 6) {
+      setTwoFactorLoginError('Please enter the full 6-digit verification code.');
+      return;
+    }
+    if (entered !== twoFactorExpectedCode && entered !== '123456') {
+      setTwoFactorLoginError(`❌ Invalid 6-digit code. Please enter the valid code (Demo: ${twoFactorExpectedCode} or 123456).`);
+      return;
+    }
+
+    setTwoFactorVerifying(true);
+    setTimeout(() => {
+      if (pending2FAUser) {
+        recordLoginEvent(pending2FAUser.email || email);
+        login(pending2FAUser);
+      }
+      setShow2FALoginModal(false);
+      setTwoFactorVerifying(false);
+    }, 400);
+  };
+
+  const handleResend2FACode = () => {
+    const freshCode = String(Math.floor(100000 + Math.random() * 900000));
+    setTwoFactorExpectedCode(freshCode);
+    setTwoFactorDigits(['', '', '', '', '', '']);
+    setTwoFactorLoginTimer(60);
+    setTwoFactorLoginError('');
+  };
 
   // ── Google Identity Services init ─────────────────────────
   // Eagerly initialize as soon as the script is ready (poll until available)
@@ -227,6 +293,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       const gPhoto = payload.picture || null;
 
       if (isAdminEmail(gEmail)) {
+        recordLoginEvent(gEmail);
         login({ email: gEmail, name: 'Admin (Rai Amit Rai)', role: 'admin', accountType: 'admin', photoUrl: gPhoto });
         return;
       }
@@ -235,6 +302,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       if (existingUser) {
         const resolvedAccountType = existingUser.accountType || (existingUser.company ? 'recruiter' : 'candidate');
         const resolvedRole = existingUser.role || (resolvedAccountType === 'recruiter' ? 'client' : 'candidate');
+        recordLoginEvent(gEmail);
         login({ ...existingUser, photoUrl: gPhoto || existingUser.photoUrl, accountType: resolvedAccountType, role: resolvedRole });
       } else {
         const newUser = {
@@ -245,6 +313,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
           approvalStatus: userAccountType === 'recruiter' ? 'PENDING_APPROVAL' : 'APPROVED',
         };
         const registered = registerUser(newUser, '');
+        recordLoginEvent(gEmail);
         login({ ...registered, photoUrl: gPhoto });
       }
     } catch (e) {
@@ -396,6 +465,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       if (inputPass === FIXED_ADMIN.password || inputPass === 'admin@123') {
         localStorage.removeItem(attemptsKey);
         localStorage.removeItem(lockoutKey);
+        recordLoginEvent(emailLower);
         login({ email: emailLower, name: 'Admin (Rai Amit Rai)', role: 'admin', accountType: 'admin' });
         return;
       }
@@ -486,6 +556,20 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       }
       localStorage.removeItem(attemptsKey);
       localStorage.removeItem(lockoutKey);
+
+      // Check if user has Two-Factor Authentication (2FA) enabled
+      if (isTwoFactorEnabled(emailLower)) {
+        const freshCode = String(Math.floor(100000 + Math.random() * 900000));
+        setTwoFactorExpectedCode(freshCode);
+        setPending2FAUser({ ...existingUser, accountType: registeredType });
+        setTwoFactorDigits(['', '', '', '', '', '']);
+        setTwoFactorLoginError('');
+        setTwoFactorLoginTimer(60);
+        setShow2FALoginModal(true);
+        return;
+      }
+
+      recordLoginEvent(emailLower);
       login({ ...existingUser, accountType: registeredType });
       return;
     }
@@ -2364,6 +2448,250 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════
+          TWO-FACTOR AUTHENTICATION (2FA) LOGIN VERIFICATION MODAL
+      ════════════════════════════════════════════════════════ */}
+      {show2FALoginModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 350,
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              width: '460px',
+              maxWidth: '95vw',
+              background: '#ffffff',
+              borderRadius: '24px',
+              boxShadow: '0 25px 60px rgba(15, 23, 42, 0.35)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+              textAlign: 'center',
+            }}
+          >
+            {/* Security Header Banner */}
+            <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', padding: '1.75rem 1.5rem 1.5rem', color: '#ffffff' }}>
+              <div
+                style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(6px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 0.75rem auto',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}
+              >
+                <ShieldCheck size={28} color="#ffffff" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em' }}>
+                Two-Factor Authentication
+              </h3>
+              <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.85)', lineHeight: 1.4 }}>
+                Account security verification is enabled for this recruiter profile.
+              </p>
+            </div>
+
+            <div style={{ padding: '1.5rem 1.75rem 1.75rem' }}>
+              {/* Recruiter Email Badge */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  color: '#334155',
+                  marginBottom: '1rem',
+                }}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                Signing in as: <span style={{ color: '#4338ca' }}>{pending2FAUser?.email || email}</span>
+              </div>
+
+              {/* Demo / Verification Code Tip */}
+              <div
+                style={{
+                  background: '#eef2ff',
+                  border: '1px dashed #818cf8',
+                  borderRadius: '12px',
+                  padding: '0.65rem 1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#4338ca', fontWeight: '800', textTransform: 'uppercase', display: 'block' }}>
+                    🔑 Verification Code
+                  </span>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    Enter generated code or use <strong style={{ color: '#312e81' }}>123456</strong>
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '1rem',
+                    fontWeight: '900',
+                    color: '#4338ca',
+                    background: '#ffffff',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #c7d2fe',
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  {twoFactorExpectedCode}
+                </span>
+              </div>
+
+              {twoFactorLoginError && (
+                <div
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    borderRadius: '10px',
+                    padding: '0.55rem 0.85rem',
+                    marginBottom: '1rem',
+                    fontWeight: '700',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <AlertCircle size={14} />
+                  <span>{twoFactorLoginError}</span>
+                </div>
+              )}
+
+              {/* 6-Digit OTP Boxes */}
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                {twoFactorDigits.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    id={`twofa-input-${idx}`}
+                    type="text"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handle2FADigitInput(idx, e.target.value)}
+                    onKeyDown={e => handle2FAKeyDown(idx, e)}
+                    style={{
+                      width: '46px',
+                      height: '52px',
+                      textAlign: 'center',
+                      fontSize: '1.35rem',
+                      fontWeight: '800',
+                      background: '#fff',
+                      border: digit ? '2px solid #4f46e5' : '2px solid #cbd5e1',
+                      borderRadius: '12px',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxShadow: digit ? '0 0 0 3px rgba(79, 70, 229, 0.15)' : 'none',
+                      transition: 'all 0.15s ease',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Timer & Resend */}
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
+                  {twoFactorLoginTimer > 0 ? `Code expires in ${twoFactorLoginTimer}s` : 'Code expired'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResend2FACode}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#4f46e5',
+                    fontWeight: '800',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Regenerate Code
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShow2FALoginModal(false);
+                    setPending2FAUser(null);
+                    setTwoFactorLoginError('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Back to Login
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerify2FALogin}
+                  disabled={twoFactorVerifying}
+                  style={{
+                    flex: 1.4,
+                    padding: '0.75rem',
+                    background: '#4f46e5',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <ShieldCheck size={16} />
+                  {twoFactorVerifying ? 'Verifying...' : 'Verify & Sign In'}
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
