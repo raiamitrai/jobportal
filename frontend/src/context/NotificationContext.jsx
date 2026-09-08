@@ -9,8 +9,8 @@ export function NotificationProvider({ children }) {
       const saved = localStorage.getItem('careonix_central_notifications');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // ── Purge old seed/demo notifications from any previous builds ──
-        const cleaned = parsed.filter(n => !n.id?.startsWith('notif_seed_'));
+        // ── Purge old seed/demo notifications and any verification code OTPs ──
+        const cleaned = parsed.filter(n => !n.id?.startsWith('notif_seed_') && !n.title?.includes('Verification Code'));
         // Re-save if any seeds were removed
         if (cleaned.length !== parsed.length) {
           localStorage.setItem('careonix_central_notifications', JSON.stringify(cleaned));

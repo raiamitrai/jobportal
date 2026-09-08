@@ -40,11 +40,9 @@ import {
   Bookmark
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 
 export default function CandidateProfilePage() {
   const { user, updateUserProfileName, updateUserAvatar } = useAuth();
-  const { addNotification } = useNotifications();
   const { subTab } = useParams();
   const navigate = useNavigate();
 
@@ -99,7 +97,6 @@ export default function CandidateProfilePage() {
   const email = user?.email || getScopedValue('email', '');
   const [phone, setPhone] = useState(() => getScopedValue('phone', user?.phone || ''));
   const [location, setLocation] = useState(() => getScopedValue('location', user?.location || ''));
-  const [isPhoneVerified, setIsPhoneVerified] = useState(() => getScopedValue('phone_verified', 'false') === 'true');
   const [aboutText, setAboutText] = useState(() => getScopedValue('about', ''));
   const [avatarUrl, setAvatarUrl] = useState(() => user?.avatar || user?.photoUrl || getScopedValue('avatar', ''));
 
@@ -193,11 +190,6 @@ export default function CandidateProfilePage() {
   const [tempEditValue, setTempEditValue] = useState('');
   const [showEditPhoneModal, setShowEditPhoneModal] = useState(false);
   const [newPhoneInput, setNewPhoneInput] = useState('');
-  const [showPhoneOtpModal, setShowPhoneOtpModal] = useState(false);
-  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
-  const [otpTimer, setOtpTimer] = useState(30);
-  const [otpError, setOtpError] = useState('');
-  const [generatedPhoneOtp, setGeneratedPhoneOtp] = useState('');
 
   // Sync state whenever logged-in user changes
   useEffect(() => {
@@ -205,7 +197,6 @@ export default function CandidateProfilePage() {
     setName(user?.name || getScopedValue('name', 'Candidate'));
     setPhone(getScopedValue('phone', user?.phone || ''));
     setLocation(getScopedValue('location', user?.location || ''));
-    setIsPhoneVerified(getScopedValue('phone_verified', 'false') === 'true');
     setAboutText(getScopedValue('about', ''));
     setAvatarUrl(user?.avatar || user?.photoUrl || getScopedValue('avatar', ''));
     setSocialLinks(getScopedJson('social_links', { linkedin: '', github: '', portfolio: '' }));
@@ -238,7 +229,6 @@ export default function CandidateProfilePage() {
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_name`, name); }, [name, userKey]);
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_phone`, phone); }, [phone, userKey]);
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_location`, location); }, [location, userKey]);
-  useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_phone_verified`, isPhoneVerified.toString()); }, [isPhoneVerified, userKey]);
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_about`, aboutText); }, [aboutText, userKey]);
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_social_links`, JSON.stringify(socialLinks)); }, [socialLinks, userKey]);
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_resume_name`, resumeFileName); }, [resumeFileName, userKey]);
@@ -251,7 +241,7 @@ export default function CandidateProfilePage() {
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_preferences`, JSON.stringify(preferences)); }, [preferences, userKey]);
   useEffect(() => { if (userKey && userKey !== 'guest') localStorage.setItem(`careonix_prof_${userKey}_account_settings`, JSON.stringify(accountSettings)); }, [accountSettings, userKey]);
 
-  // Profile Strength Calculation
+  // Profile Strength Calculation (Cleanly balanced across 6 sections = 100%)
   const hasName = Boolean(name && name.trim());
   const hasEmail = Boolean(email && email.trim());
   const hasPhone = Boolean(phone && phone.trim() && phone !== 'Not provided');
@@ -266,16 +256,14 @@ export default function CandidateProfilePage() {
   const educationPct = educations.length > 0 ? 100 : 0;
   const experiencePct = experiences.length > 0 ? 100 : 0;
   const preferencesPct = (preferences && (preferences.roles || preferences.location)) ? 100 : 0;
-  const phoneVerificationPct = (isPhoneVerified && hasPhone) ? 100 : 0;
 
   const profileScore = Math.min(100, Math.round(
-    (personalInfoPct * 0.15) +
+    (personalInfoPct * 0.20) +
     (resumePct * 0.25) +
-    (skillsPct * 0.15) +
+    (skillsPct * 0.20) +
     (educationPct * 0.15) +
     (experiencePct * 0.10) +
-    (preferencesPct * 0.10) +
-    (phoneVerificationPct * 0.10)
+    (preferencesPct * 0.10)
   ));
 
   // ── Avatar Upload Handler ─────────────────────────────────────────────────
@@ -575,98 +563,6 @@ export default function CandidateProfilePage() {
     triggerToast('🎉 Password updated successfully!');
   };
 
-  // ── Phone Verification Flow ───────────────────────────────────────────────
-  const handleStartPhoneVerification = (phoneNumToVerify) => {
-    const targetPhone = phoneNumToVerify || phone;
-    if (!targetPhone || targetPhone === 'Not provided' || !targetPhone.trim()) {
-      setShowEditPhoneModal(true);
-      setNewPhoneInput('');
-      return;
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedPhoneOtp(code);
-    setOtpTimer(30);
-    setOtpValues(['', '', '', '', '', '']);
-    setOtpError('');
-    setShowPhoneOtpModal(true);
-
-    try {
-      fetch('http://localhost:8086/notifications/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: targetPhone,
-          email: email,
-          code: code,
-          purpose: 'Candidate Phone Verification'
-        })
-      }).catch(() => {});
-    } catch (e) {}
-
-    if (addNotification) {
-      addNotification({
-        title: 'Security Verification Code',
-        message: `Your CAREONIX verification code is: ${code}. Enter this code to verify your phone number.`,
-        type: 'SYSTEM',
-        urgent: true
-      });
-    }
-  };
-
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) value = value.slice(-1);
-    const updated = [...otpValues];
-    updated[index] = value;
-    setOtpValues(updated);
-
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-input-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-input-${index - 1}`);
-      if (prevInput) prevInput.focus();
-    }
-  };
-
-  const handleVerifyPhoneSubmit = () => {
-    const entered = otpValues.join('');
-    if (entered.length < 6) {
-      setOtpError('Please enter all 6 digits.');
-      return;
-    }
-
-    if (entered === generatedPhoneOtp || entered === '123456') {
-      setIsPhoneVerified(true);
-      setShowPhoneOtpModal(false);
-      triggerToast('🎉 Phone number verified successfully! Profile strength increased.');
-    } else {
-      setOtpError('Invalid OTP code. Please check your SMS or notifications.');
-    }
-  };
-
-  const handleResendOtp = () => {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedPhoneOtp(code);
-    setOtpTimer(30);
-    setOtpValues(['', '', '', '', '', '']);
-    setOtpError('');
-
-    if (addNotification) {
-      addNotification({
-        title: 'New Security Verification Code',
-        message: `Your new CAREONIX verification code is: ${code}.`,
-        type: 'SYSTEM',
-        urgent: true
-      });
-    }
-    triggerToast('New OTP dispatched!');
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
 
@@ -744,7 +640,6 @@ export default function CandidateProfilePage() {
                 }}
               />
             ) : (
-              /* CRITICAL FIX: Fixed justify: 'center' bug to justifyContent: 'center' + lineHeight: 1 */
               <div style={{
                 width: '105px',
                 height: '105px',
@@ -825,7 +720,7 @@ export default function CandidateProfilePage() {
               <span>{email || 'No email associated'}</span>
             </div>
 
-            {/* Phone Row */}
+            {/* Phone Row - Clean and direct without verification barriers */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.86rem', color: '#334155', flexWrap: 'wrap' }}>
               <Phone size={15} color="#64748b" />
               <span>{phone || 'Not provided'}</span>
@@ -833,30 +728,8 @@ export default function CandidateProfilePage() {
                 onClick={() => { setShowEditPhoneModal(true); setNewPhoneInput(phone || ''); }}
                 style={{ background: 'none', border: 'none', color: '#4f46e5', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
               >
-                <Edit3 size={13} /> Change
+                <Edit3 size={13} /> {phone ? 'Edit' : '+ Add'}
               </button>
-
-              {isPhoneVerified ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '700' }}>
-                  <ShieldCheck size={13} /> Verified
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleStartPhoneVerification()}
-                  style={{
-                    background: '#fef3c7',
-                    color: '#b45309',
-                    border: '1px solid #fde68a',
-                    padding: '2px 8px',
-                    borderRadius: '8px',
-                    fontSize: '0.75rem',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Verify Phone
-                </button>
-              )}
             </div>
 
             {/* Location Row */}
@@ -909,33 +782,9 @@ export default function CandidateProfilePage() {
 
           <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
             {profileScore === 100
-              ? '🎉 Outstanding! Your profile is 100% complete and fully verified.'
-              : 'Complete all tabs below to maximize visibility with verified recruiters.'}
+              ? '🎉 Outstanding! Your profile is 100% complete.'
+              : 'Complete all sections below to maximize visibility with verified recruiters.'}
           </p>
-
-          {!isPhoneVerified && (
-            <button
-              onClick={() => handleStartPhoneVerification()}
-              style={{
-                width: '100%',
-                padding: '0.55rem 1rem',
-                borderRadius: '10px',
-                background: '#ffffff',
-                border: '1.5px solid #c7d2fe',
-                color: '#4f46e5',
-                fontSize: '0.82rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              <Sparkles size={14} /> Improve Profile Score
-            </button>
-          )}
         </div>
       </div>
 
@@ -1045,9 +894,8 @@ export default function CandidateProfilePage() {
 
                   <div style={{ background: '#fafafa', border: '1px solid #f1f5f9', padding: '1rem', borderRadius: '14px' }}>
                     <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Mobile Phone</div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
                       {phone || 'Not provided'}
-                      {isPhoneVerified && <span style={{ color: '#16a34a', fontSize: '0.72rem', fontWeight: '800' }}>• Verified</span>}
                     </div>
                   </div>
 
@@ -1109,7 +957,6 @@ export default function CandidateProfilePage() {
           {/* ══════════════ TAB 2: RESUME ══════════════ */}
           {currentTab === 'resume' && (
             <>
-              {/* Hidden file input for resume */}
               <input
                 type="file"
                 ref={fileInputRef}
@@ -1218,7 +1065,7 @@ export default function CandidateProfilePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                   {[
                     { label: 'File uploaded in PDF format', ok: Boolean(resumeFileName && resumeFileName.endsWith('.pdf')) },
-                    { label: 'Contact information verified', ok: Boolean(isPhoneVerified && hasPhone) },
+                    { label: 'Contact details provided', ok: Boolean(hasPhone && hasEmail) },
                     { label: 'Key technical skills listed', ok: skills.length >= 3 },
                     { label: 'Education history added', ok: educations.length > 0 }
                   ].map((chk, i) => (
@@ -1235,7 +1082,6 @@ export default function CandidateProfilePage() {
           {/* ══════════════ TAB 3: SKILLS ══════════════ */}
           {currentTab === 'skills' && (
             <>
-              {/* My Skills Card */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 1px 6px rgba(15,23,42,0.03)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <div>
@@ -1772,7 +1618,7 @@ export default function CandidateProfilePage() {
         {/* ── RIGHT SIDEBAR (PERSISTENT & STICKY ACROSS ALL TABS) ────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'sticky', top: '1.5rem', alignSelf: 'start' }}>
 
-          {/* Profile Completion Card */}
+          {/* Profile Completion Card (6 sections = 100%) */}
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '1.35rem', boxShadow: '0 1px 6px rgba(15,23,42,0.03)' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 1rem 0' }}>
               Profile Completion
@@ -1785,8 +1631,7 @@ export default function CandidateProfilePage() {
                 { label: 'Skills', pct: skillsPct, tab: 'skills' },
                 { label: 'Education', pct: educationPct, tab: 'education' },
                 { label: 'Experience', pct: experiencePct, tab: 'experience' },
-                { label: 'Preferences', pct: preferencesPct, tab: 'preferences' },
-                { label: 'Phone Verification', pct: phoneVerificationPct, tab: 'about' }
+                { label: 'Preferences', pct: preferencesPct, tab: 'preferences' }
               ].map((item, idx) => (
                 <div key={idx} onClick={() => handleTabSelect(item.tab)} style={{ cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
@@ -1799,29 +1644,6 @@ export default function CandidateProfilePage() {
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={() => handleStartPhoneVerification()}
-              style={{
-                width: '100%',
-                padding: '0.65rem',
-                borderRadius: '10px',
-                background: '#ffffff',
-                border: '1.5px solid #c7d2fe',
-                color: '#4f46e5',
-                fontSize: '0.84rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                marginTop: '1.25rem',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              <Sparkles size={15} /> Verify Phone Number
-            </button>
           </div>
 
           {/* Quick Actions Card with Tab Routing */}
@@ -2112,97 +1934,6 @@ export default function CandidateProfilePage() {
         </div>
       )}
 
-      {/* ── MODAL: Phone OTP Verification ───────────────────────────────── */}
-      {showPhoneOtpModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 250, padding: '1rem' }}>
-          <div style={{ width: '420px', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Phone size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                    Verify Phone Number
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '2px 0 0 0' }}>
-                    Enter the code sent to <strong style={{ color: '#0f172a' }}>{phone}</strong>
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowPhoneOtpModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={18} color="#64748b" />
-              </button>
-            </div>
-
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem 0.9rem', marginBottom: '1rem', fontSize: '0.8rem', color: '#475569', lineHeight: '1.4' }}>
-              📩 A 6-digit OTP code has been dispatched to <strong>{phone}</strong>. Check your phone SMS or system notifications and enter the code below.
-            </div>
-
-            {otpError && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.65rem', borderRadius: '10px', fontSize: '0.82rem', fontWeight: '600', marginBottom: '1rem', textAlign: 'center' }}>
-                {otpError}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', margin: '1.5rem 0' }}>
-              {otpValues.map((val, idx) => (
-                <input
-                  key={idx}
-                  id={`otp-input-${idx}`}
-                  type="text"
-                  maxLength={1}
-                  value={val}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  style={{
-                    width: '46px',
-                    height: '52px',
-                    borderRadius: '12px',
-                    border: `2px solid ${val ? '#7c3aed' : '#cbd5e1'}`,
-                    background: val ? '#f3e8ff' : '#ffffff',
-                    fontSize: '1.25rem',
-                    fontWeight: '800',
-                    textAlign: 'center',
-                    color: '#0f172a',
-                    outline: 'none'
-                  }}
-                />
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', fontSize: '0.82rem' }}>
-              <span style={{ color: '#64748b' }}>Didn't receive code?</span>
-              {otpTimer > 0 ? (
-                <span style={{ color: '#94a3b8', fontWeight: '600' }}>Resend in {otpTimer}s</span>
-              ) : (
-                <button
-                  onClick={handleResendOtp}
-                  style={{ background: 'none', border: 'none', color: '#4f46e5', fontWeight: '800', cursor: 'pointer', padding: 0 }}
-                >
-                  Resend OTP
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => setShowPhoneOtpModal(false)}
-                style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleVerifyPhoneSubmit}
-                style={{ flex: 1.5, padding: '0.75rem', borderRadius: '12px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', border: 'none', color: '#ffffff', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,0.3)' }}
-              >
-                Verify Phone
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── MODAL: Generic Name/Location/About Editor ────────────────────── */}
       {editingSection && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 250, padding: '1rem' }}>
@@ -2258,7 +1989,7 @@ export default function CandidateProfilePage() {
         </div>
       )}
 
-      {/* ── MODAL: Change / Edit Phone Number ────────────────────────────── */}
+      {/* ── MODAL: Change / Edit Mobile Number (Direct Save, No OTP) ─────── */}
       {showEditPhoneModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 250, padding: '1rem' }}>
           <div style={{ width: '450px', background: '#ffffff', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0' }}>
@@ -2268,7 +1999,7 @@ export default function CandidateProfilePage() {
                   <Phone size={20} />
                 </div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Change Mobile Number
+                  Update Mobile Number
                 </h3>
               </div>
               <button onClick={() => setShowEditPhoneModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2277,7 +2008,7 @@ export default function CandidateProfilePage() {
             </div>
 
             <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 1.25rem 0', lineHeight: '1.45' }}>
-              Enter your mobile number below. You will be prompted to verify this number via SMS OTP.
+              Enter your mobile contact number. This number will be shared with recruiters when you submit job applications.
             </p>
 
             <form onSubmit={(e) => {
@@ -2288,9 +2019,11 @@ export default function CandidateProfilePage() {
               }
               const clean = newPhoneInput.trim();
               setPhone(clean);
-              setIsPhoneVerified(false);
+              if (userKey && userKey !== 'guest') {
+                localStorage.setItem(`careonix_prof_${userKey}_phone`, clean);
+              }
               setShowEditPhoneModal(false);
-              handleStartPhoneVerification(clean);
+              triggerToast('🎉 Mobile number saved successfully!');
             }}>
               <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'block', marginBottom: '5px' }}>
                 Mobile Number
@@ -2307,8 +2040,8 @@ export default function CandidateProfilePage() {
                 <button type="button" onClick={() => setShowEditPhoneModal(false)} style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', fontSize: '0.86rem', cursor: 'pointer' }}>
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '0.6rem 1.4rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', border: 'none', color: '#ffffff', fontWeight: '800', fontSize: '0.86rem', cursor: 'pointer' }}>
-                  Save & Verify
+                <button type="submit" style={{ padding: '0.6rem 1.4rem', borderRadius: '10px', background: '#4f46e5', border: 'none', color: '#ffffff', fontWeight: '800', fontSize: '0.86rem', cursor: 'pointer' }}>
+                  Save Mobile Number
                 </button>
               </div>
             </form>
