@@ -2,14 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, LogOut, CheckCircle, Info, X, Sparkles, Menu, ChevronDown, ShieldCheck, UserCheck, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { formatRelativeTime, formatExactDateTime, useRelativeTimeTick } from '../utils/timeAgo';
 import careonixLogo from '../assets/careonix-logo-transparent.png';
 
 export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar }) {
   const { user, logout } = useAuth();
   const { getNotificationsForUser, markAllAsRead, markAsRead } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showAllNotifs, setShowAllNotifs] = useState(false);
   const notifRef = useRef(null);
+
+  // Auto-refresh dynamic timestamps every 30 seconds
+  useRelativeTimeTick(30000);
 
   const emailClean = (user?.email || user?.identifier || '').toLowerCase();
   const accountTypeClean = (user?.accountType || '').toLowerCase();
@@ -29,7 +32,8 @@ export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar 
 
   const notifications = getNotificationsForUser(emailClean, role);
   const unreadCount = notifications.filter(n => !n.read).length;
-  const displayedNotifications = showAllNotifs ? notifications : notifications.slice(0, 1);
+  // Show up to 6 recent notifications in bell dropdown
+  const displayedNotifications = notifications.slice(0, 6);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -225,8 +229,11 @@ export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar 
                           <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', lineHeight: 1.35 }}>
                             {n.message}
                           </div>
-                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '4px' }}>
-                            {n.time}
+                          <div
+                            title={formatExactDateTime(n)}
+                            style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '4px' }}
+                          >
+                            {formatRelativeTime(n, n.time || 'Recently')}
                           </div>
                         </div>
                         {!n.read && (

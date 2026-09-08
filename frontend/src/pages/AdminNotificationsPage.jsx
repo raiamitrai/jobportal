@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useNotifications } from '../context/NotificationContext';
+import { formatRelativeTime, formatExactDateTime, useRelativeTimeTick } from '../utils/timeAgo';
 
 const STATUS_STYLES = {
   'Delivered': { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
@@ -58,6 +59,9 @@ export default function AdminNotificationsPage() {
   const [toastMsg, setToastMsg]               = useState('');
   const [localSent, setLocalSent]             = useState([]);
 
+  // Auto-refresh dynamic timestamps every 30 seconds
+  useRelativeTimeTick(30000);
+
   // Merge central notifications from NotificationContext + any local broadcasts
   const allNotifList = [...(centralNotifs || []), ...localSent];
 
@@ -71,7 +75,8 @@ export default function AdminNotificationsPage() {
       userCount: 'Active Users',
       channels: n.channels || (n.channel === 'BOTH' ? ['bell', 'email'] : [n.channel?.toLowerCase() || 'bell']),
       status: n.status || 'Delivered',
-      sentAt: n.time || n.sentAt || 'Recently',
+      sentAt: formatRelativeTime(n, n.time || n.sentAt || 'Recently'),
+      exactTime: formatExactDateTime(n),
       createdBy: n.sender || n.createdBy || 'Admin',
       iconIdx: idx % 8,
       bodyMsg: n.message || n.bodyMsg || n.snippet || n.title,
@@ -413,7 +418,7 @@ export default function AdminNotificationsPage() {
                       </td>
 
                       {/* Sent At */}
-                      <td style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>{n.sentAt}</td>
+                      <td title={n.exactTime} style={{ color: '#475569', fontSize: '0.78rem', fontWeight: '600' }}>{n.sentAt}</td>
 
                       {/* Actions Menu */}
                       <td className="action-menu-container" style={{ textAlign: 'right', position: 'relative' }}>
@@ -663,7 +668,7 @@ export default function AdminNotificationsPage() {
                         }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                           <strong style={{ fontSize: '0.82rem', color: '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{msg.recipientEmail}</strong>
-                          <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{msg.sentAt?.split(',')[1] || 'Just now'}</span>
+                          <span title={formatExactDateTime(msg)} style={{ fontSize: '0.68rem', color: '#64748b' }}>{formatRelativeTime(msg, msg.sentAt || 'Just now')}</span>
                         </div>
                         <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#f1f5f9', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.title}</div>
                         <div style={{ fontSize: '0.72rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.message}</div>

@@ -5,10 +5,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { formatRelativeTime, formatExactDateTime, useRelativeTimeTick } from '../utils/timeAgo';
 
 export default function NotificationsPage({ role }) {
   const { user } = useAuth();
   const { getNotificationsForUser, markAllAsRead, markAsRead } = useNotifications();
+
+  // Auto-refresh dynamic timestamps every 30 seconds
+  useRelativeTimeTick(30000);
 
   const [activeFilterTab, setActiveFilterTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -232,9 +236,12 @@ export default function NotificationsPage({ role }) {
                   </p>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.75rem', color: '#64748b' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '600' }}>
+                    <span
+                      title={formatExactDateTime(item)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: '600' }}
+                    >
                       <Clock size={13} color="#94a3b8" />
-                      {item.time || 'Recently'}
+                      {formatRelativeTime(item, item.time || 'Recently')}
                     </span>
 
                     {item.sender && (

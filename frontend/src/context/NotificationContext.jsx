@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSettings } from '../utils/settingsManager';
+import { formatRelativeTime, formatExactDateTime, extractTimestamp } from '../utils/timeAgo';
 
 const NotificationContext = createContext(null);
 
@@ -92,13 +93,15 @@ export function NotificationProvider({ children }) {
     if (item.type === 'JOB_POSTED' && notifSettings.jobModeration === false) return null;
     if (item.type === 'ADMIN_ALERT' && notifSettings.recruiterSignup === false) return null;
 
+    const now = Date.now();
     const newNotif = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      ...item,
+      id: item.id || `notif_${now}_${Math.random().toString(36).substr(2, 4)}`,
       time: 'Just now',
-      read: false,
+      read: item.read ?? false,
       channel: item.channel || 'BOTH',
-      createdAt: new Date().toISOString(),
-      ...item
+      createdAt: item.createdAt || new Date(now).toISOString(),
+      timestamp: item.timestamp || now,
     };
 
     let updatedList = [];
@@ -395,7 +398,9 @@ export function NotificationProvider({ children }) {
       notifyRecruiterEventToAdmin,
       notifyAdminRecruiterAction,
       notifyAdminToCandidate,
-      notifyNewMessage
+      notifyNewMessage,
+      formatRelativeTime,
+      formatExactDateTime
     }}>
       {children}
     </NotificationContext.Provider>
@@ -405,3 +410,5 @@ export function NotificationProvider({ children }) {
 export function useNotifications() {
   return useContext(NotificationContext);
 }
+
+export { formatRelativeTime, formatExactDateTime, extractTimestamp } from '../utils/timeAgo';
