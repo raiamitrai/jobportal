@@ -35,13 +35,7 @@ function useInView(threshold = 0.15) {
 }
 
 export default function LandingPage({ onLogin, onSignup }) {
-  const [statsRef, statsInView] = useInView();
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
-
-  const c1 = useCounter(12400, 2000, statsInView);
-  const c2 = useCounter(3800, 2200, statsInView);
-  const c3 = useCounter(97, 1800, statsInView);
-  const c4 = useCounter(420, 2400, statsInView);
 
   useEffect(() => {
     const handler = (e) => {
@@ -506,60 +500,6 @@ export default function LandingPage({ onLogin, onSignup }) {
               </div>
             </div>
           </GlassCard>
-        </div>
-      </section>
-
-      {/* ── STATS SECTION ── */}
-      <section
-        ref={statsRef}
-        style={{
-          position: 'relative', zIndex: 1,
-          padding: '0 4rem 5rem',
-          maxWidth: '1320px', margin: '0 auto',
-        }}
-      >
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem',
-        }}>
-          {[
-            { count: c1, suffix: '+', label: 'Active Candidates', icon: '👥', color: '#7c3aed' },
-            { count: c2, suffix: '+', label: 'Jobs Posted', icon: '💼', color: '#0ea5e9' },
-            { count: c3, suffix: '%', label: 'Success Rate', icon: '🏆', color: '#10b981' },
-            { count: c4, suffix: '+', label: 'Top Recruiters', icon: '🏢', color: '#f59e0b' },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className="stat-card"
-              style={{
-                background: dm
-                  ? 'rgba(255,255,255,0.04)'
-                  : 'rgba(255,255,255,0.9)',
-                border: `1px solid ${dm ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                borderRadius: 20,
-                padding: '1.75rem 1.5rem',
-                textAlign: 'center',
-                backdropFilter: 'blur(20px)',
-                boxShadow: dm
-                  ? '0 8px 30px rgba(0,0,0,0.3)'
-                  : '0 8px 30px rgba(0,0,0,0.06)',
-                transition: 'all 0.3s ease',
-                cursor: 'default',
-              }}
-            >
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{stat.icon}</div>
-              <div style={{
-                fontSize: '2.4rem', fontWeight: 900,
-                background: `linear-gradient(135deg, ${stat.color}, ${stat.color}bb)`,
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text', lineHeight: 1, marginBottom: '0.4rem',
-              }}>
-                {stat.count.toLocaleString()}{stat.suffix}
-              </div>
-              <div style={{ fontSize: '0.85rem', color: dm ? '#94a3b8' : '#64748b', fontWeight: 600 }}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
