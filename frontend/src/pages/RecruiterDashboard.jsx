@@ -156,11 +156,11 @@ export default function RecruiterDashboard({ setActiveTab }) {
       {/* ── Top Header Welcome & Action Row ─────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.85rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Welcome back, Recruiter! 👋
+          <h1 style={{ fontSize: '1.65rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+            Dashboard
           </h1>
           <p style={{ color: '#64748b', marginTop: '4px', fontSize: '0.88rem' }}>
-            Here's what's happening with your jobs today.
+            Overview of active job postings, candidate applications, and hiring metrics.
           </p>
         </div>
 

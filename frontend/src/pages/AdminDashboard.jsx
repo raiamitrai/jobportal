@@ -178,7 +178,7 @@ export default function AdminDashboard({ setActiveTab }) {
             Dashboard
           </h1>
           <p style={{ color: '#64748b', marginTop: '4px', fontSize: '0.9rem' }}>
-            Welcome back, Admin! Real-time metrics overview on CAREONIX.
+            Real-time platform metrics, user management, and system operations.
           </p>
         </div>
 

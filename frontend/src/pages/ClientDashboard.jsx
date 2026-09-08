@@ -607,7 +607,7 @@ export default function ClientDashboard({ setActiveTab }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem', flex: 1 }}>
             <div>
               <h1 style={{ fontSize: '1.65rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                {role === 'recruiter' ? `Recruiter Dashboard 🧑‍💼` : role === 'admin' ? `Admin Control Panel ⚙️` : `Welcome back, ${user?.name ? user.name.split(' ')[0] : (user?.email ? user.email.split('@')[0] : 'Candidate')}! 👏`}
+                {role === 'recruiter' ? 'Recruiter Dashboard' : role === 'admin' ? 'Admin Control Panel' : 'Dashboard'}
               </h1>
               <p style={{ color: '#64748b', marginTop: '5px', fontSize: '0.88rem' }}>
                 {role === 'candidate' ? 'Find verified job opportunities from official company career pages.' : 'Manage job postings, review candidates, and track applications.'}
