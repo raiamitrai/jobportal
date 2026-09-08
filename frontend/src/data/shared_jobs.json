@@ -1,5 +1,34 @@
 [
   {
+    "id": 1788899645331,
+    "title": "laravel",
+    "company": "TCS",
+    "location": "kolkata",
+    "currency": "INR",
+    "salary": "₹120000",
+    "type": "Full-time",
+    "experience": "Fresher (0-1 Year)",
+    "lastDateToApply": "2026-08-31",
+    "skills": [
+      "lara",
+      "vel",
+      "html",
+      "css",
+      "bootstrap",
+      "communication",
+      "interpretor"
+    ],
+    "applicationMethod": "external",
+    "applyUrl": "https://www.linkedin.com/company/tata-consultancy-services/jobs/?originalSubdomain=in",
+    "source": "www.linkedin.com",
+    "logoUrl": null,
+    "verified": true,
+    "status": "PENDING",
+    "applications": 0,
+    "postedBy": "serope7216@murkstar.com",
+    "postedDate": "Sep 9, 2026"
+  },
+  {
     "id": 1788595578308,
     "title": "python developer",
     "company": "Softpro",

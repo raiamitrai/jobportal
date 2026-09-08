@@ -35,6 +35,13 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobContext';
 import RecruiterFeatureLock from './RecruiterFeatureLock';
 import { isRecruiterUnlocked, getRecruiterSubscription } from '../utils/subscriptionUtils';
+import {
+  getTodayIsoDate,
+  getDefaultDeadlineDate,
+  formatJobDate,
+  isJobExpired,
+  isDateInPast
+} from '../utils/timeAgo';
 
 export default function RecruiterDashboard({ setActiveTab }) {
   const { user } = useAuth();
@@ -53,7 +60,7 @@ export default function RecruiterDashboard({ setActiveTab }) {
     currency: 'INR',
     salary: '12,00,000 - 18,00,000',
     experience: '2-4 Yrs',
-    lastDateToApply: '2026-08-31',
+    lastDateToApply: getDefaultDeadlineDate(30),
     skills: 'Java, Spring Boot, React, MySQL',
     applyUrl: 'https://technova.careers/apply/java-dev',
     logoUrl: null
@@ -70,6 +77,11 @@ export default function RecruiterDashboard({ setActiveTab }) {
   const handlePostSubmit = (e) => {
     e.preventDefault();
     if (!postForm.title) return;
+
+    if (isDateInPast(postForm.lastDateToApply)) {
+      alert('Application deadline cannot be in the past. Please select today or a future date (Format: DD - MM - YYYY).');
+      return;
+    }
 
     addJob({
       ...postForm,
@@ -90,7 +102,7 @@ export default function RecruiterDashboard({ setActiveTab }) {
         currency: 'INR',
         salary: '12,00,000 - 18,00,000',
         experience: '2-4 Yrs',
-        lastDateToApply: '2026-08-31',
+        lastDateToApply: getDefaultDeadlineDate(30),
         skills: 'Java, Spring Boot, React, MySQL',
         applyUrl: 'https://technova.careers/apply/java-dev',
         logoUrl: null
@@ -267,7 +279,7 @@ export default function RecruiterDashboard({ setActiveTab }) {
           recruiterJobs.some(rj => String(rj.id) === String(a.jobId) || rj.title?.toLowerCase() === a.jobTitle?.toLowerCase())
         );
 
-        const activeJobsCount = recruiterJobs.filter(j => (j.status || 'ACTIVE').toUpperCase() === 'ACTIVE').length;
+        const activeJobsCount = recruiterJobs.filter(j => !isJobExpired(j.lastDateToApply) && (j.status || 'ACTIVE').toUpperCase() === 'ACTIVE').length;
         const totalAppsCount = recruiterApps.length;
         const shortlistedCount = recruiterApps.filter(a => (a.status || '').toUpperCase() === 'SHORTLISTED').length;
         const interviewsCount = recruiterApps.filter(a => (a.status || '').toUpperCase() === 'INTERVIEW').length;
@@ -277,6 +289,9 @@ export default function RecruiterDashboard({ setActiveTab }) {
 
         const realTopJobs = recruiterJobs.map((j, idx) => {
           const jobApps = recruiterApps.filter(a => String(a.jobId) === String(j.id) || a.jobTitle?.toLowerCase() === j.title?.toLowerCase());
+          const isExpired = isJobExpired(j.lastDateToApply);
+          const isClosed = (j.status || '').toUpperCase() === 'CLOSED' || isExpired;
+          const displayStatus = isExpired ? 'Expired' : (isClosed ? 'Closed' : 'Active');
           return {
             id: j.id || `job-${idx}`,
             title: j.title,
@@ -286,7 +301,11 @@ export default function RecruiterDashboard({ setActiveTab }) {
             shortlisted: jobApps.filter(a => (a.status || '').toUpperCase() === 'SHORTLISTED').length,
             interviews: jobApps.filter(a => (a.status || '').toUpperCase() === 'INTERVIEW').length,
             hired: jobApps.filter(a => (a.status || '').toUpperCase() === 'HIRED' || (a.status || '').toUpperCase() === 'ACCEPTED').length,
-            status: (j.status || 'Active').charAt(0).toUpperCase() + (j.status || 'active').slice(1).toLowerCase(),
+            status: displayStatus,
+            isExpired,
+            isClosed,
+            deadline: j.lastDateToApply,
+            formattedDeadline: formatJobDate(j.lastDateToApply),
             type: j.type || 'Full-time'
           };
         }).sort((a, b) => b.apps - a.apps);
@@ -589,11 +608,18 @@ export default function RecruiterDashboard({ setActiveTab }) {
                         realTopJobs.map((j, i) => (
                           <tr key={i} style={{ borderBottom: i === realTopJobs.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
                             <td style={{ padding: '0.9rem 0' }}>
-                              <div style={{ fontWeight: '800', color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a' }} />
+                              <div style={{ fontWeight: '800', color: j.isExpired ? '#64748b' : '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: j.isExpired ? '#dc2626' : (j.isClosed ? '#ea580c' : '#16a34a'), flexShrink: 0 }} />
                                 {j.title}
+                                {j.isExpired && (
+                                  <span style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
+                                    Expired
+                                  </span>
+                                )}
                               </div>
-                              <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>{j.loc}</div>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                                {j.loc} &bull; Deadline: <strong style={{ color: j.isExpired ? '#dc2626' : '#475569' }}>{j.formattedDeadline}</strong>
+                              </div>
                             </td>
                             <td style={{ padding: '0.9rem 0', textAlign: 'center', fontWeight: '800', color: '#0f172a' }}>{j.apps}</td>
                             <td style={{ padding: '0.9rem 0', textAlign: 'center', fontWeight: '700', color: '#475569' }}>{j.shortlisted}</td>
@@ -657,15 +683,15 @@ export default function RecruiterDashboard({ setActiveTab }) {
                             <div style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: '700', marginTop: '2px' }}>Applications: {rj.apps}</div>
                           </div>
                           <span style={{
-                            background: rj.status === 'Active' ? '#dcfce7' : '#fffbe6',
-                            color: rj.status === 'Active' ? '#15803d' : '#d97706',
-                            border: `1px solid ${rj.status === 'Active' ? '#bbf7d0' : '#fef08a'}`,
+                            background: rj.isExpired ? '#fee2e2' : (rj.status === 'Active' ? '#dcfce7' : '#fffbe6'),
+                            color: rj.isExpired ? '#b91c1c' : (rj.status === 'Active' ? '#15803d' : '#d97706'),
+                            border: `1px solid ${rj.isExpired ? '#fca5a5' : (rj.status === 'Active' ? '#bbf7d0' : '#fef08a')}`,
                             padding: '2px 8px',
                             borderRadius: '10px',
                             fontSize: '0.72rem',
                             fontWeight: '700'
                           }}>
-                            {rj.status}
+                            {rj.isExpired ? 'Expired' : rj.status}
                           </span>
                         </div>
                       ))
@@ -1053,6 +1079,30 @@ export default function RecruiterDashboard({ setActiveTab }) {
                 </div>
 
                 <div>
+                  <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
+                    Last Date to Apply (Deadline) *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={getTodayIsoDate()}
+                    value={postForm.lastDateToApply || getDefaultDeadlineDate(30)}
+                    onChange={e => setPostForm({ ...postForm, lastDateToApply: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem', fontFamily: 'Inter, sans-serif' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.74rem', color: '#7c3aed', fontWeight: '700' }}>
+                      Format: {formatJobDate(postForm.lastDateToApply || getDefaultDeadlineDate(30))}
+                    </span>
+                    {isDateInPast(postForm.lastDateToApply) ? (
+                      <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: '700' }}>⚠️ Deadline cannot be in past!</span>
+                    ) : (
+                      <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600' }}>✓ Today or future date</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
                   <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Skills (comma separated)</label>
                   <input
                     type="text"
@@ -1138,10 +1188,42 @@ export default function RecruiterDashboard({ setActiveTab }) {
               </div>
             </div>
 
+            <div style={{ marginBottom: '1.25rem', padding: '0.75rem 1rem', background: selectedJobDetails.isExpired ? '#fef2f2' : '#f8fafc', borderRadius: '12px', border: `1px solid ${selectedJobDetails.isExpired ? '#fecaca' : '#e2e8f0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', display: 'block' }}>Application Deadline</span>
+                <strong style={{ fontSize: '0.92rem', color: selectedJobDetails.isExpired ? '#dc2626' : '#0f172a' }}>
+                  {selectedJobDetails.formattedDeadline || formatJobDate(selectedJobDetails.deadline)}
+                </strong>
+              </div>
+              <span style={{
+                background: selectedJobDetails.isExpired ? '#fee2e2' : (selectedJobDetails.status === 'Active' ? '#dcfce7' : '#fffbe6'),
+                color: selectedJobDetails.isExpired ? '#b91c1c' : (selectedJobDetails.status === 'Active' ? '#15803d' : '#d97706'),
+                border: `1px solid ${selectedJobDetails.isExpired ? '#fca5a5' : (selectedJobDetails.status === 'Active' ? '#bbf7d0' : '#fef08a')}`,
+                padding: '3px 10px',
+                borderRadius: '8px',
+                fontSize: '0.75rem',
+                fontWeight: '800'
+              }}>
+                {selectedJobDetails.isExpired ? '🔴 Deadline Passed (Closed)' : (selectedJobDetails.status === 'Active' ? '🟢 Open for Applications' : '🟠 Closed')}
+              </span>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button onClick={() => setSelectedJobDetails(null)} style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}>
                 Close
               </button>
+              {selectedJobDetails.isExpired && (
+                <button
+                  onClick={() => {
+                    setSelectedJobDetails(null);
+                    setActiveTab('jobs');
+                  }}
+                  title="Extend deadline to reopen applications"
+                  style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', background: '#ecfdf5', border: '1.5px solid #6ee7b7', color: '#047857', fontWeight: '800', cursor: 'pointer' }}
+                >
+                  Extend Deadline & Reopen
+                </button>
+              )}
               <button onClick={() => { setSelectedJobDetails(null); setActiveTab('applications'); }} style={{ padding: '0.6rem 1.4rem', borderRadius: '10px', background: '#4f46e5', border: 'none', color: '#ffffff', fontWeight: '800', cursor: 'pointer' }}>
                 Manage Applications
               </button>

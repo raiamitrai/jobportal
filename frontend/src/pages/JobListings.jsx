@@ -12,6 +12,13 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import CompanyLogo from '../components/CompanyLogo';
 import { getSettings } from '../utils/settingsManager';
+import {
+  getTodayIsoDate,
+  getDefaultDeadlineDate,
+  formatJobDate,
+  isJobExpired,
+  isDateInPast
+} from '../utils/timeAgo';
 
 // ─── Logo Upload ──────────────────────────────────────────────────────────────
 function LogoUpload({ logoUrl, onChange }) {
@@ -285,8 +292,33 @@ function JobModal({ title, form, setForm, onSubmit, onClose, submitLabel, succes
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={lStyle}>Last Date to Apply</label>
-                <input style={iStyle} type="date" value={form.lastDateToApply || '2026-08-31'} onChange={e => setForm(f => ({ ...f, lastDateToApply: e.target.value }))} />
+                <label style={lStyle}>Last Date to Apply (Deadline) *</label>
+                <input
+                  style={iStyle}
+                  type="date"
+                  required
+                  min={getTodayIsoDate()}
+                  value={form.lastDateToApply || getDefaultDeadlineDate(30)}
+                  onChange={e => {
+                    const newDate = e.target.value;
+                    setForm(f => {
+                      const wasExpired = isJobExpired(f.lastDateToApply);
+                      const isNewFuture = !isJobExpired(newDate);
+                      const nextStatus = (wasExpired && isNewFuture && (f.status || '').toUpperCase() === 'CLOSED') ? 'ACTIVE' : (f.status || 'ACTIVE');
+                      return { ...f, lastDateToApply: newDate, status: nextStatus };
+                    });
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.74rem', color: '#6366f1', fontWeight: '700' }}>
+                    Format: {formatJobDate(form.lastDateToApply || getDefaultDeadlineDate(30))}
+                  </span>
+                  {isDateInPast(form.lastDateToApply) ? (
+                    <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: '700' }}>⚠️ Date is in past!</span>
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600' }}>✓ Today or future date</span>
+                  )}
+                </div>
               </div>
               <div>
                 <label style={lStyle}>Application Method</label>
@@ -337,7 +369,9 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
     ? job.skills
     : (job.skills ? job.skills.split(',').map(s => s.trim()) : []);
 
-  const isClosed = (job.status || '').toUpperCase() === 'CLOSED';
+  const isExpired = isJobExpired(job.lastDateToApply);
+  const isManuallyClosed = (job.status || '').toUpperCase() === 'CLOSED';
+  const isClosed = isManuallyClosed || isExpired;
   const uEmail = (currentUser?.email || '').toLowerCase().trim();
   const uId = (currentUser?.identifier || '').toLowerCase().trim();
   const uName = (currentUser?.name || '').toLowerCase().trim();
@@ -377,11 +411,15 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
             <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 2px 0', wordBreak: 'break-word' }}>
               {job.title}
             </h3>
-            {isClosed && (
+            {isExpired ? (
+              <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '0.72rem', fontWeight: '800', padding: '1px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <Lock size={10} /> Deadline Passed
+              </span>
+            ) : isClosed ? (
               <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '0.72rem', fontWeight: '800', padding: '1px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 <Lock size={10} /> Closed
               </span>
-            )}
+            ) : null}
           </div>
           <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             {job.company}
@@ -413,7 +451,17 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
         textAlign: 'center',
         padding: '0 0.5rem'
       }}>
-        {isClosed ? (
+        {isExpired ? (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            background: '#fee2e2', color: '#b91c1c',
+            border: '1px solid #fca5a5',
+            padding: '3px 12px', borderRadius: '6px',
+            fontSize: '0.76rem', fontWeight: '700'
+          }}>
+            <Lock size={12} /> Closed &bull; Deadline Passed
+          </span>
+        ) : isClosed ? (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '4px',
             background: '#fee2e2', color: '#b91c1c',
@@ -444,10 +492,22 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
           <div style={{ display: 'flex', gap: '0.4rem', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               onClick={() => onEdit(job)}
-              title="Edit job details"
-              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+              title={isExpired ? "Extend application deadline date" : "Edit job details"}
+              style={{
+                background: isExpired ? '#fef3c7' : '#f8fafc',
+                border: `1px solid ${isExpired ? '#f59e0b' : '#cbd5e1'}`,
+                color: isExpired ? '#b45309' : '#334155',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
+              }}
             >
-              <Edit3 size={13} /> Edit
+              <Edit3 size={13} /> {isExpired ? 'Extend Deadline' : 'Edit'}
             </button>
             <button
               onClick={() => onDelete(job.id, job.title)}
@@ -459,7 +519,7 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
             {isClosed ? (
               <button
                 onClick={() => onStatusChange && onStatusChange(job.id, 'ACTIVE')}
-                title="Activate job - candidates can apply again"
+                title={isExpired ? "Extend deadline to activate" : "Activate job - candidates can apply again"}
                 style={{ background: '#ecfdf5', border: '1.5px solid #6ee7b7', color: '#047857', padding: '4px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.3rem', boxShadow: '0 1px 4px rgba(16,185,129,0.15)' }}
               >
                 <Unlock size={13} /> Activate
@@ -490,13 +550,13 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
         }}>
           {job.lastDateToApply && (
             <span style={{ fontSize: '0.72rem', color: isClosed ? '#94a3b8' : '#ea580c', fontWeight: '700', background: isClosed ? '#f1f5f9' : '#fffbeb', border: `1px solid ${isClosed ? '#e2e8f0' : '#fef3c7'}`, padding: '2px 8px', borderRadius: '6px', whiteSpace: 'nowrap', width: '100%' }}>
-              Deadline: {job.lastDateToApply}
+              Deadline: {formatJobDate(job.lastDateToApply)}
             </span>
           )}
           {isClosed ? (
             <button
               disabled
-              title="Applications are closed for this position"
+              title={isExpired ? "Application deadline has passed for this position" : "Applications are closed for this position"}
               style={{
                 padding: '0.45rem 0.9rem',
                 background: '#f8fafc',
@@ -514,7 +574,7 @@ function JobCard({ job, role, currentUser, hasApplied, isSaved, onApply, onSave,
                 opacity: 0.85
               }}
             >
-              <Lock size={13} /> Applications Closed
+              <Lock size={13} /> {isExpired ? 'Application Closed (Deadline Passed)' : 'Applications Closed'}
             </button>
           ) : hasApplied ? (
             <button
@@ -1329,7 +1389,7 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
   const [showPostModal, setShowPostModal] = useState(initialShowPostModal || false);
   const [postStep, setPostStep] = useState(1);
   const [postAppMethod, setPostAppMethod] = useState('careonix');
-  const [postForm, setPostForm] = useState({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: '2026-08-31', logoUrl: null });
+  const [postForm, setPostForm] = useState({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: getDefaultDeadlineDate(30), logoUrl: null });
   const [postSuccess, setPostSuccess] = useState('');
 
   const [careonixApplyJob, setCareonixApplyJob] = useState(null);
@@ -1474,6 +1534,11 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
   const handlePostSubmit = (e) => {
     e.preventDefault();
     if (!postForm.title) return;
+    if (isDateInPast(postForm.lastDateToApply)) {
+      alert('Application deadline cannot be in the past. Please select today or a future date (Format: DD - MM - YYYY).');
+      return;
+    }
+
     addJob({
       ...postForm,
       applicationMethod: postAppMethod,
@@ -1497,7 +1562,7 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
       setPostSuccess('');
       setShowPostModal(false);
       setPostStep(1);
-      setPostForm({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: '2026-08-31', logoUrl: null });
+      setPostForm({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: getDefaultDeadlineDate(30), logoUrl: null });
     }, 1400);
   };
 
@@ -1514,7 +1579,7 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
       salary: job.salary ? job.salary.replace(/[₹$]/g, '').trim() : '',
       type: job.type || 'Full-time',
       experience: job.experience || '1-3 Years',
-      lastDateToApply: job.lastDateToApply || '2026-08-31',
+      lastDateToApply: job.lastDateToApply || getDefaultDeadlineDate(30),
       skills: Array.isArray(job.skills) ? job.skills.join(', ') : (job.skills || ''),
       applicationMethod: method,
       applyUrl: job.applyUrl || '',
@@ -1526,6 +1591,12 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (!editForm.title) return;
+
+    if (isDateInPast(editForm.lastDateToApply)) {
+      alert('Application deadline cannot be in the past. Please select today or a future date (Format: DD - MM - YYYY).');
+      return;
+    }
+
     updateJob(editingJob.id, {
       ...editForm,
       applicationMethod: editForm.applicationMethod || postAppMethod
@@ -1538,6 +1609,14 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
   };
 
   const handleStatusChange = (jobId, newStatus) => {
+    if (newStatus === 'ACTIVE') {
+      const target = jobs.find(j => String(j.id) === String(jobId));
+      if (target && isJobExpired(target.lastDateToApply)) {
+        alert('This job\'s application deadline has expired (' + formatJobDate(target.lastDateToApply) + '). Please extend the deadline date to today or a future date to reopen applications.');
+        startEdit(target);
+        return;
+      }
+    }
     if (updateJobStatus) {
       updateJobStatus(jobId, newStatus);
     }

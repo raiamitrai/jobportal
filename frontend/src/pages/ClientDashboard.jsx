@@ -21,6 +21,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobContext';
 import CompanyLogo from '../components/CompanyLogo';
+import {
+  getTodayIsoDate,
+  getDefaultDeadlineDate,
+  formatJobDate,
+  isJobExpired,
+  isDateInPast
+} from '../utils/timeAgo';
 
 // ─── Reusable Job Card — Responsive Fluid Layout ────────────────────────
 function JobCard({ job, role, hasApplied, isSaved, onApply, onSave, onEdit, onDelete, onStatusChange }) {
@@ -28,7 +35,9 @@ function JobCard({ job, role, hasApplied, isSaved, onApply, onSave, onEdit, onDe
     ? job.skills
     : (job.skills ? job.skills.split(',').map(s => s.trim()) : []);
 
-  const isClosed = (job.status || '').toUpperCase() === 'CLOSED';
+  const isExpired = isJobExpired(job.lastDateToApply);
+  const isManuallyClosed = (job.status || '').toUpperCase() === 'CLOSED';
+  const isClosed = isManuallyClosed || isExpired;
 
   return (
     <div style={{
@@ -57,11 +66,15 @@ function JobCard({ job, role, hasApplied, isSaved, onApply, onSave, onEdit, onDe
             <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 2px 0', wordBreak: 'break-word' }}>
               {job.title}
             </h3>
-            {isClosed && (
+            {isExpired ? (
+              <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '0.72rem', fontWeight: '800', padding: '1px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <Lock size={10} /> Deadline Passed
+              </span>
+            ) : isClosed ? (
               <span style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '0.72rem', fontWeight: '800', padding: '1px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 <Lock size={10} /> Closed
               </span>
-            )}
+            ) : null}
           </div>
           {/* Company + Verified tick */}
           <span style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -105,7 +118,17 @@ function JobCard({ job, role, hasApplied, isSaved, onApply, onSave, onEdit, onDe
         padding: '0 0.5rem'
       }}>
         {/* Status badge */}
-        {isClosed ? (
+        {isExpired ? (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            background: '#fee2e2', color: '#b91c1c',
+            border: '1px solid #fca5a5',
+            padding: '3px 12px', borderRadius: '6px',
+            fontSize: '0.76rem', fontWeight: '700'
+          }}>
+            <Lock size={12} /> Closed &bull; Deadline Passed
+          </span>
+        ) : isClosed ? (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '4px',
             background: '#fee2e2', color: '#b91c1c',
@@ -189,14 +212,14 @@ function JobCard({ job, role, hasApplied, isSaved, onApply, onSave, onEdit, onDe
         }}>
           {job.lastDateToApply && (
             <span style={{ fontSize: '0.72rem', color: isClosed ? '#94a3b8' : '#ea580c', fontWeight: '700', background: isClosed ? '#f1f5f9' : '#fffbeb', border: `1px solid ${isClosed ? '#e2e8f0' : '#fef3c7'}`, padding: '2px 8px', borderRadius: '6px', whiteSpace: 'nowrap', width: '100%' }}>
-              Deadline: {job.lastDateToApply}
+              Deadline: {formatJobDate(job.lastDateToApply)}
             </span>
           )}
           {/* Apply Now / Applied / Closed button */}
           {isClosed ? (
             <button
               disabled
-              title="Applications are closed for this position"
+              title={isExpired ? "Application deadline has passed for this position" : "Applications are closed for this position"}
               style={{
                 padding: '0.45rem 0.9rem',
                 background: '#f8fafc',
@@ -214,7 +237,7 @@ function JobCard({ job, role, hasApplied, isSaved, onApply, onSave, onEdit, onDe
                 opacity: 0.85
               }}
             >
-              <Lock size={13} /> Applications Closed
+              <Lock size={13} /> {isExpired ? 'Application Closed (Deadline Passed)' : 'Applications Closed'}
             </button>
           ) : hasApplied ? (
             <button
@@ -438,8 +461,33 @@ function JobModal({ title, form, setForm, onSubmit, onClose, submitLabel = 'Publ
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Last Date to Apply</label>
-              <input style={inputStyle} type="date" value={form.lastDateToApply || '2026-08-31'} onChange={e => setForm(f => ({ ...f, lastDateToApply: e.target.value }))} />
+              <label style={labelStyle}>Last Date to Apply (Deadline) *</label>
+              <input
+                style={inputStyle}
+                type="date"
+                required
+                min={getTodayIsoDate()}
+                value={form.lastDateToApply || getDefaultDeadlineDate(30)}
+                onChange={e => {
+                  const newDate = e.target.value;
+                  setForm(f => {
+                    const wasExpired = isJobExpired(f.lastDateToApply);
+                    const isNewFuture = !isJobExpired(newDate);
+                    const nextStatus = (wasExpired && isNewFuture && (f.status || '').toUpperCase() === 'CLOSED') ? 'ACTIVE' : (f.status || 'ACTIVE');
+                    return { ...f, lastDateToApply: newDate, status: nextStatus };
+                  });
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <span style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: '700' }}>
+                  Format: {formatJobDate(form.lastDateToApply || getDefaultDeadlineDate(30))}
+                </span>
+                {isDateInPast(form.lastDateToApply) ? (
+                  <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: '700' }}>⚠️ Date is in past!</span>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '600' }}>✓ Valid future date</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -500,7 +548,7 @@ export default function ClientDashboard({ setActiveTab }) {
 
   // Post modal (recruiter/admin)
   const [showPostModal, setShowPostModal] = useState(false);
-  const [postForm, setPostForm] = useState({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: '2026-08-31', logoUrl: null });
+  const [postForm, setPostForm] = useState({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: getDefaultDeadlineDate(30), logoUrl: null });
   const [postSuccess, setPostSuccess] = useState('');
 
   // Edit modal
@@ -528,9 +576,13 @@ export default function ClientDashboard({ setActiveTab }) {
   const handlePostSubmit = (e) => {
     e.preventDefault();
     if (!postForm.title) return;
+    if (isDateInPast(postForm.lastDateToApply)) {
+      alert('Application deadline cannot be in the past. Please select today or a future date (Format: DD - MM - YYYY).');
+      return;
+    }
     addJob({ ...postForm, skills: postForm.skills || '' }, user);
     setPostSuccess('🎉 Job vacancy published successfully!');
-    setTimeout(() => { setPostSuccess(''); setShowPostModal(false); setPostForm({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: '2026-08-31', logoUrl: null }); }, 1400);
+    setTimeout(() => { setPostSuccess(''); setShowPostModal(false); setPostForm({ currency: 'INR', type: 'Full-time', experience: '1-3 Years', lastDateToApply: getDefaultDeadlineDate(30), logoUrl: null }); }, 1400);
   };
 
   const startEdit = (job) => {
@@ -543,15 +595,20 @@ export default function ClientDashboard({ setActiveTab }) {
       salary: job.salary ? job.salary.replace(/[₹$]/g, '').trim() : '',
       type: job.type || 'Full-time',
       experience: job.experience || '1-3 Years',
-      lastDateToApply: job.lastDateToApply || '2026-08-31',
+      lastDateToApply: job.lastDateToApply || getDefaultDeadlineDate(30),
       skills: Array.isArray(job.skills) ? job.skills.join(', ') : (job.skills || ''),
       applyUrl: job.applyUrl || '',
-      logoUrl: job.logoUrl || null
+      logoUrl: job.logoUrl || null,
+      status: (job.status || 'ACTIVE').toUpperCase()
     });
   };
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
+    if (isDateInPast(editForm.lastDateToApply)) {
+      alert('Application deadline cannot be in the past. Please select today or a future date (Format: DD - MM - YYYY).');
+      return;
+    }
     updateJob(editingJob.id, { ...editForm, skills: editForm.skills || '' });
     setEditSuccess('✅ Job updated successfully!');
     setTimeout(() => { setEditSuccess(''); setEditingJob(null); }, 1400);

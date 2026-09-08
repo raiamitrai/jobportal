@@ -268,3 +268,102 @@ export function formatWhatsAppMessageTime(msg) {
   const y = targetDate.getFullYear();
   return `${d}/${m}/${y}, ${timeStr}`;
 }
+
+/**
+ * Returns today's date formatted as YYYY-MM-DD in local time for HTML <input type="date" min="...">
+ */
+export function getTodayIsoDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Returns a default future deadline date (e.g. 30 days from now) in YYYY-MM-DD format
+ */
+export function getDefaultDeadlineDate(daysAhead = 30) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Formats any date string into standard "DD - MM - YYYY" format
+ * e.g., '2026-09-15' -> '15 - 09 - 2026'
+ */
+export function formatJobDate(dateStr) {
+  if (!dateStr) return '';
+  const str = String(dateStr).trim();
+
+  // If already formatted with dashes/slashes DD-MM-YYYY or DD - MM - YYYY
+  const dmyMatch = str.match(/^(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{4})$/);
+  if (dmyMatch) {
+    return `${dmyMatch[1].padStart(2, '0')} - ${dmyMatch[2].padStart(2, '0')} - ${dmyMatch[3]}`;
+  }
+
+  // If standard YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = str.match(/^(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/);
+  if (ymdMatch) {
+    return `${ymdMatch[3].padStart(2, '0')} - ${ymdMatch[2].padStart(2, '0')} - ${ymdMatch[1]}`;
+  }
+
+  // Fallback Date parser
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const yyyy = parsed.getFullYear();
+    return `${dd} - ${mm} - ${yyyy}`;
+  }
+
+  return str;
+}
+
+/**
+ * Checks if a given date string is strictly in the past (before today's local date)
+ */
+export function isDateInPast(dateStr) {
+  if (!dateStr) return false;
+  const todayStr = getTodayIsoDate();
+  const str = String(dateStr).trim();
+
+  // YYYY-MM-DD
+  const ymdMatch = str.match(/^(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/);
+  if (ymdMatch) {
+    const iso = `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+    return iso < todayStr;
+  }
+
+  // DD - MM - YYYY
+  const dmyMatch = str.match(/^(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{4})/);
+  if (dmyMatch) {
+    const iso = `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+    return iso < todayStr;
+  }
+
+  // Generic date
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}` < todayStr;
+  }
+
+  return false;
+}
+
+/**
+ * Checks if a job has expired based on its lastDateToApply.
+ * A deadline of today is active until the end of today (so expired if lastDateToApply < today).
+ */
+export function isJobExpired(lastDateToApply) {
+  if (!lastDateToApply) return false;
+  return isDateInPast(lastDateToApply);
+}
+

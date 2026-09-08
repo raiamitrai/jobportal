@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getSettings } from '../utils/settingsManager';
+import { isJobExpired, getDefaultDeadlineDate } from '../utils/timeAgo';
 
 export const INITIAL_JOBS = [];
 
@@ -489,7 +490,7 @@ export function JobProvider({ children }) {
       salary: formattedSalary,
       type: jobData.type || 'Full-time',
       experience: jobData.experience || '1-3 Years',
-      lastDateToApply: jobData.lastDateToApply || '2026-08-31',
+      lastDateToApply: jobData.lastDateToApply || getDefaultDeadlineDate(30),
       skills: Array.isArray(jobData.skills)
         ? jobData.skills
         : (jobData.skills ? jobData.skills.split(',').map(s => s.trim()).filter(Boolean) : ['Java', 'Spring Boot']),
@@ -499,6 +500,9 @@ export function JobProvider({ children }) {
       logoUrl: jobData.logoUrl || null,
       verified: true,
       status: (() => {
+        if (isJobExpired(jobData.lastDateToApply)) {
+          return 'CLOSED';
+        }
         const isPublisherRecruiter = (publisherUser?.accountType || publisherUser?.role || '').toLowerCase() === 'recruiter' || Boolean(publisherUser?.company);
         const accessSettings = getSettings()?.access || {};
         if (isPublisherRecruiter && accessSettings.recruiterCanPostDirectly === false) {
@@ -539,6 +543,25 @@ export function JobProvider({ children }) {
 
     const updatedJobs = jobs.map(j => {
       if (String(j.id) === String(jobId)) {
+        const nextDeadline = updatedData.lastDateToApply !== undefined ? updatedData.lastDateToApply : j.lastDateToApply;
+        const isFutureDeadline = !isJobExpired(nextDeadline);
+        const wasExpired = isJobExpired(j.lastDateToApply);
+        const wasClosed = (j.status || '').toUpperCase() === 'CLOSED';
+
+        // Status transition:
+        let nextStatus;
+        if (!isFutureDeadline) {
+          // Past deadline automatically forces CLOSED status
+          nextStatus = 'CLOSED';
+        } else if (updatedData.status) {
+          nextStatus = updatedData.status.toUpperCase();
+        } else if (wasExpired || wasClosed) {
+          // If recruiter extends deadline of an expired or closed job to a future date, auto-reopen to ACTIVE
+          nextStatus = 'ACTIVE';
+        } else {
+          nextStatus = (j.status || 'ACTIVE').toUpperCase();
+        }
+
         return {
           ...j,
           title: updatedData.title || j.title,
@@ -548,7 +571,7 @@ export function JobProvider({ children }) {
           salary: formattedSalary,
           type: updatedData.type || j.type,
           experience: updatedData.experience || j.experience,
-          lastDateToApply: updatedData.lastDateToApply || j.lastDateToApply,
+          lastDateToApply: nextDeadline,
           skills: Array.isArray(updatedData.skills)
             ? updatedData.skills
             : (updatedData.skills ? updatedData.skills.split(',').map(s => s.trim()).filter(Boolean) : j.skills),
@@ -556,7 +579,7 @@ export function JobProvider({ children }) {
           applyUrl: appMethod === 'external' ? (updatedData.applyUrl !== undefined ? updatedData.applyUrl : j.applyUrl) : '',
           source: appMethod === 'external' ? (updatedData.applyUrl ? updatedData.applyUrl.replace(/^https?:\/\//, '').split('/')[0] : j.source) : 'careonix.com',
           logoUrl: updatedData.logoUrl !== undefined ? updatedData.logoUrl : j.logoUrl,
-          status: updatedData.status ? updatedData.status.toUpperCase() : (j.status || 'ACTIVE')
+          status: nextStatus
         };
       }
       return j;
@@ -656,8 +679,8 @@ export function JobProvider({ children }) {
     // Guard: don't create application if we don't know who the user is
     if (!candEmail) return null;
 
-    // Guard: don't allow applications if the job is closed by Recruiter or Admin
-    if (targetJob && (targetJob.status || '').toUpperCase() === 'CLOSED') {
+    // Guard: don't allow applications if the job is closed by Recruiter/Admin or deadline has passed
+    if (targetJob && ((targetJob.status || '').toUpperCase() === 'CLOSED' || isJobExpired(targetJob.lastDateToApply))) {
       return null;
     }
 

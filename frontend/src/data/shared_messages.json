@@ -23,14 +23,122 @@
         "text": "ki haal chal",
         "time": "03:07 PM",
         "timestamp": 1788601062931
+      },
+      {
+        "id": "msg-1788899235330-ze47hl",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "hi",
+        "time": "01:57 AM",
+        "timestamp": 1788899235330
+      },
+      {
+        "id": "msg-1788899238616-emd0um",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "hi",
+        "time": "01:57 AM",
+        "timestamp": 1788899238616
+      },
+      {
+        "id": "msg-1788899240855-aptkyr",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "hi",
+        "time": "01:57 AM",
+        "timestamp": 1788899240855
+      },
+      {
+        "id": "msg-1788899241821-4n1ywm",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "hi",
+        "time": "01:57 AM",
+        "timestamp": 1788899241821
+      },
+      {
+        "id": "msg-1788899242740-w202i9",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "hi",
+        "time": "01:57 AM",
+        "timestamp": 1788899242740
+      },
+      {
+        "id": "msg-1788899244117-gbhv9l",
+        "sender": "admin",
+        "senderEmail": "raiamitrai1001@gmail.com",
+        "text": "hi",
+        "time": "01:57 AM",
+        "timestamp": 1788899244117
       }
     ],
     "unreadCounts": {
       "candidate": 0,
-      "recruiter": 1,
+      "recruiter": 7,
       "admin": 0
     },
-    "updatedAt": 1788601062931
+    "updatedAt": 1788899244117
+  },
+  {
+    "id": "thread_jalagob793_airhemp_com_serope7216_murkstar_com_1787682817560",
+    "type": "candidate_recruiter",
+    "candidateEmail": "jalagob793@airhemp.com",
+    "candidateName": "Krishna",
+    "candidateAvatar": "",
+    "recruiterEmail": "serope7216@murkstar.com",
+    "recruiterName": "serope7216",
+    "companyName": "TATA",
+    "jobId": "1787682817560",
+    "jobTitle": "java developer",
+    "messages": [
+      {
+        "id": "m-init-1788597301885",
+        "sender": "system",
+        "senderEmail": "system",
+        "text": "🎉 Chat initialized for application \"java developer\" at TATA.",
+        "time": "02:05 PM",
+        "timestamp": 1788597301885
+      },
+      {
+        "id": "m-init-1788597301929",
+        "sender": "system",
+        "senderEmail": "system",
+        "text": "🎉 Chat initialized for application \"java developer\" at TATA.",
+        "time": "02:05 PM",
+        "timestamp": 1788597301929
+      },
+      {
+        "id": "msg-1788897749857-axq11k",
+        "sender": "recruiter",
+        "senderEmail": "serope7216@murkstar.com",
+        "text": "hiii",
+        "time": "01:32 AM",
+        "timestamp": 1788897749857
+      },
+      {
+        "id": "msg-1788898483069-xftk77",
+        "sender": "candidate",
+        "senderEmail": "jalagob793@airhemp.com",
+        "text": "hioooo",
+        "time": "01:44 AM",
+        "timestamp": 1788898483069
+      },
+      {
+        "id": "msg-1788898492576-9a2l35",
+        "sender": "recruiter",
+        "senderEmail": "serope7216@murkstar.com",
+        "text": "hiiiiiiii",
+        "time": "01:44 AM",
+        "timestamp": 1788898492576
+      }
+    ],
+    "unreadCounts": {
+      "candidate": 0,
+      "recruiter": 0,
+      "admin": 0
+    },
+    "updatedAt": 1788898492576
   },
   {
     "id": "thread_jalagob793_airhemp_com_wifoben326_murkstar_com_1788595578308",
@@ -107,42 +215,6 @@
       "admin": 0
     },
     "updatedAt": 1788597414468
-  },
-  {
-    "id": "thread_jalagob793_airhemp_com_serope7216_murkstar_com_1787682817560",
-    "type": "candidate_recruiter",
-    "candidateEmail": "jalagob793@airhemp.com",
-    "candidateName": "Krishna",
-    "candidateAvatar": "",
-    "recruiterEmail": "serope7216@murkstar.com",
-    "recruiterName": "serope7216",
-    "companyName": "TATA",
-    "jobId": "1787682817560",
-    "jobTitle": "java developer",
-    "messages": [
-      {
-        "id": "m-init-1788597301885",
-        "sender": "system",
-        "senderEmail": "system",
-        "text": "🎉 Chat initialized for application \"java developer\" at TATA.",
-        "time": "02:05 PM",
-        "timestamp": 1788597301885
-      },
-      {
-        "id": "m-init-1788597301929",
-        "sender": "system",
-        "senderEmail": "system",
-        "text": "🎉 Chat initialized for application \"java developer\" at TATA.",
-        "time": "02:05 PM",
-        "timestamp": 1788597301929
-      }
-    ],
-    "unreadCounts": {
-      "candidate": 0,
-      "recruiter": 0,
-      "admin": 0
-    },
-    "updatedAt": 1788597301929
   },
   {
     "id": "thread-admin-wifoben326_murkstar_com",
