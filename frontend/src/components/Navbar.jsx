@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, LogOut, CheckCircle, Info, X, Sparkles, Menu, ChevronDown, ShieldCheck, UserCheck, Mail, ArrowRight } from 'lucide-react';
+import { Bell, LogOut, CheckCircle, Info, X, Sparkles, Menu, ChevronDown, ShieldCheck, UserCheck, Mail, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import careonixLogo from '../assets/careonix-logo-transparent.png';
@@ -67,7 +67,7 @@ export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar 
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
         
-        {/* Left Side: Mobile Hamburger + Brand Logo + Optional Search Bar */}
+        {/* Left Side: Mobile Hamburger + Brand Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
           
           {/* Universal Hamburger Menu Button (Visible on Mobile & Tablet < 1024px) */}
@@ -97,27 +97,6 @@ export default function Navbar({ activeTab, setActiveTab, onToggleMobileSidebar 
               style={{ height: '30px', width: 'auto', objectFit: 'contain', display: 'block' }}
             />
           </div>
-
-          {activeTab !== 'jobs' && activeTab !== 'help' && activeTab !== 'saved' && role !== 'admin' && (
-            <div className="navbar-search-wrapper" style={{ position: 'relative', width: '100%', maxWidth: '360px', minWidth: 0 }}>
-              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input
-                type="text"
-                placeholder="Search portal..."
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 0.85rem 0.5rem 2.25rem',
-                  borderRadius: '9999px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  color: '#0f172a',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                  fontFamily: 'Inter, sans-serif'
-                }}
-              />
-            </div>
-          )}
         </div>
 
         {/* Right Controls */}
