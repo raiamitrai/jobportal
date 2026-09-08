@@ -346,6 +346,11 @@ export function getTwoFactorPin(userEmail) {
     }
   } catch (e) {}
 
+  // 4. Safe fallback: if 2FA is enabled but no custom PIN was saved yet, use 123456
+  if (isTwoFactorEnabled(userEmail)) {
+    return '123456';
+  }
+
   return null;
 }
 
