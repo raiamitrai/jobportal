@@ -623,14 +623,30 @@ export default function RecruiterApplicationsPage({ setActiveTab }) {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
                     onClick={() => {
-                      if (candResumeData) {
+                      if (candResumeData && (candResumeData.startsWith('data:') || candResumeData.startsWith('blob:') || candResumeData.startsWith('http'))) {
                         const a = document.createElement('a');
                         a.href = candResumeData;
                         a.download = candResumeName;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
+                        triggerToast(`📥 Downloading ${candResumeName}...`);
                       } else {
+                        const printWindow = window.open('', '_blank');
+                        if (printWindow) {
+                          printWindow.document.write(`
+                            <!DOCTYPE html><html><head><title>${selectedCandidateApp.candidateName || 'Candidate'} - Resume</title>
+                            <style>body{font-family:'Segoe UI',sans-serif;padding:30px;color:#0f172a;}h1{margin:0;}@media print{.no-print{display:none;}}</style></head>
+                            <body><div class="no-print" style="margin-bottom:15px;"><button onclick="window.print()" style="background:#4f46e5;color:#fff;padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🖨️ Print / Save as PDF</button></div>
+                            <h1>${selectedCandidateApp.candidateName || 'Candidate Profile'}</h1><h3 style="color:#4f46e5;">${selectedCandidateApp.jobTitle || 'Applicant'}</h3>
+                            <p>Email: ${selectedCandidateApp.candidateEmail || 'N/A'} • Phone: ${selectedCandidateApp.candidatePhone || getCandVal('phone', 'N/A')}</p>
+                            <h3>Skills</h3><p>${(candSkills || []).join(', ')}</p>
+                            <h3>Summary</h3><p>${candAbout || 'Verified applicant on CAREONIX.'}</p>
+                            </body></html>
+                          `);
+                          printWindow.document.close();
+                          printWindow.focus();
+                        }
                         triggerToast(`📥 Downloading ${candResumeName}...`);
                       }
                     }}
@@ -638,21 +654,37 @@ export default function RecruiterApplicationsPage({ setActiveTab }) {
                   >
                     <Download size={14} /> Download Resume
                   </button>
-                  {candResumeData && (
-                    <button
-                      onClick={() => {
+                  <button
+                    onClick={() => {
+                      if (candResumeData && (candResumeData.startsWith('data:') || candResumeData.startsWith('blob:') || candResumeData.startsWith('http'))) {
                         const win = window.open();
                         if (win) {
                           win.document.write(
                             `<iframe src="${candResumeData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
                           );
                         }
-                      }}
-                      style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Eye size={14} color="#4f46e5" /> View Resume
-                    </button>
-                  )}
+                      } else {
+                        const printWindow = window.open('', '_blank');
+                        if (printWindow) {
+                          printWindow.document.write(`
+                            <!DOCTYPE html><html><head><title>${selectedCandidateApp.candidateName || 'Candidate'} - Resume Preview</title>
+                            <style>body{font-family:'Segoe UI',sans-serif;padding:30px;color:#0f172a;}h1{margin:0;}@media print{.no-print{display:none;}}</style></head>
+                            <body><div class="no-print" style="margin-bottom:15px;"><button onclick="window.print()" style="background:#4f46e5;color:#fff;padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">🖨️ Print / Save as PDF</button></div>
+                            <h1>${selectedCandidateApp.candidateName || 'Candidate Profile'}</h1><h3 style="color:#4f46e5;">${selectedCandidateApp.jobTitle || 'Applicant'}</h3>
+                            <p>Email: ${selectedCandidateApp.candidateEmail || 'N/A'} • Phone: ${selectedCandidateApp.candidatePhone || getCandVal('phone', 'N/A')}</p>
+                            <h3>Skills</h3><p>${(candSkills || []).join(', ')}</p>
+                            <h3>Summary</h3><p>${candAbout || 'Verified applicant on CAREONIX.'}</p>
+                            </body></html>
+                          `);
+                          printWindow.document.close();
+                          printWindow.focus();
+                        }
+                      }
+                    }}
+                    style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Eye size={14} color="#4f46e5" /> View Resume
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.65rem' }}>

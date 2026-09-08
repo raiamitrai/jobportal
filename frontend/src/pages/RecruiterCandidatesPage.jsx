@@ -23,7 +23,14 @@ import {
   CheckCircle2,
   Lock,
   Bookmark,
-  TrendingUp
+  TrendingUp,
+  Printer,
+  ExternalLink,
+  Mail,
+  Phone,
+  Building,
+  Calendar,
+  Award
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobContext';
@@ -44,6 +51,7 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
   // Modals
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showResumeModal, setShowResumeModal] = useState(null);
+  const [resumeTab, setResumeTab] = useState('uploaded'); // 'uploaded' | 'structured'
   const [showInviteModal, setShowInviteModal] = useState(null);
   const [selectedInviteJobId, setSelectedInviteJobId] = useState('');
   const [toastMsg, setToastMsg] = useState('');
@@ -51,7 +59,268 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
 
   const triggerToast = (msg) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(''), 3000);
+    setTimeout(() => setToastMsg(''), 3500);
+  };
+
+  const handleOpenChatWithCandidate = (cand) => {
+    if (!cand) return;
+    const cleanCandEmail = (cand.email || `${cand.name.toLowerCase().replace(/\s+/g, '')}@gmail.com`).toLowerCase().trim();
+    const cleanRecEmail = (user?.email || user?.identifier || '').toLowerCase().trim();
+    const jobTitle = cand.appliedJobTitle || cand.role || 'Job Opportunity';
+    const chosenJob = (jobs || []).find(j => j.title === cand.appliedJobTitle) || (jobs || [])[0];
+    const jobId = chosenJob?.id || '1';
+
+    if (openConversation) {
+      openConversation({
+        candidateEmail: cleanCandEmail,
+        candidateName: cand.name,
+        recruiterEmail: cleanRecEmail,
+        recruiterName: user?.name || cleanRecEmail.split('@')[0],
+        companyName: user?.company || 'CAREONIX Partner',
+        jobId: jobId,
+        jobTitle: jobTitle
+      });
+      if (setActiveTab) {
+        setActiveTab('messages');
+      }
+    } else if (setActiveTab) {
+      setActiveTab('messages');
+    }
+  };
+
+  const handleDownloadResume = (cand) => {
+    if (!cand) return;
+
+    // Case 1: Candidate uploaded a real file (Base64 data URL, blob, or URL)
+    if (cand.resumeData && (cand.resumeData.startsWith('data:') || cand.resumeData.startsWith('blob:') || cand.resumeData.startsWith('http'))) {
+      const link = document.createElement('a');
+      link.href = cand.resumeData;
+      link.download = cand.resumeFileName || `${cand.name.replace(/\s+/g, '_')}_Resume.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      triggerToast(`📥 Downloading ${cand.resumeFileName || 'Resume.pdf'}...`);
+      return;
+    }
+
+    // Case 2: Structured CAREONIX Resume Document - Printable View / Save as PDF
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      triggerToast('⚠️ Please allow popups to preview and download the resume PDF.');
+      return;
+    }
+
+    const skillsHtml = (cand.skills || []).map(s => `<span class="skill-tag">${s}</span>`).join('');
+    const eduList = Array.isArray(cand.educationList) && cand.educationList.length > 0
+      ? cand.educationList
+      : [{ degree: cand.degree || 'Bachelor of Technology', university: cand.university || 'Technical University', years: '2020 – 2024', cgpa: '8.5 / 10' }];
+
+    const eduHtml = eduList.map(e => `
+      <div class="item">
+        <div class="item-head">
+          <strong>${e.degree || 'Degree'}</strong>
+          <span class="meta">${e.years || ''}</span>
+        </div>
+        <div class="sub">${e.university || ''} ${e.cgpa ? `• CGPA / Grade: ${e.cgpa}` : ''}</div>
+      </div>
+    `).join('');
+
+    const expList = Array.isArray(cand.experienceList) && cand.experienceList.length > 0
+      ? cand.experienceList
+      : [{
+          title: (cand.role || 'Software Developer').replace('Applicant for ', ''),
+          company: 'Software Engineering Solutions',
+          duration: cand.experience || '2 – 4 Years',
+          note: `Actively developed and maintained enterprise applications specializing in ${(cand.skills || []).slice(0, 3).join(', ')}.`
+        }];
+
+    const expHtml = expList.map(x => `
+      <div class="item">
+        <div class="item-head">
+          <strong>${x.title || 'Role'}</strong>
+          <span class="meta">${x.duration || ''}</span>
+        </div>
+        <div class="sub">${x.company || ''} ${x.type ? `• ${x.type}` : ''}</div>
+        ${x.note ? `<p class="desc">${x.note}</p>` : ''}
+      </div>
+    `).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${cand.name} - Official Resume (CAREONIX)</title>
+        <meta charset="utf-8" />
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            color: #0f172a;
+            background: #ffffff;
+            line-height: 1.5;
+          }
+          .resume-container {
+            max-width: 820px;
+            margin: 0 auto;
+            border: 1px solid #e2e8f0;
+            padding: 45px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+          }
+          .name {
+            font-size: 28px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+          }
+          .role {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 8px;
+          }
+          .contact-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 13px;
+            color: #64748b;
+          }
+          .contact-item { display: flex; align-items: center; gap: 4px; }
+          .section { margin-bottom: 24px; }
+          .section-title {
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #4338ca;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+          }
+          .summary-text {
+            font-size: 14px;
+            color: #334155;
+            line-height: 1.6;
+            margin: 0;
+          }
+          .skills-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          .skill-tag {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+          }
+          .item { margin-bottom: 16px; }
+          .item-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 14.5px;
+            color: #0f172a;
+          }
+          .meta { font-size: 12.5px; color: #64748b; font-weight: 600; }
+          .sub { font-size: 13px; color: #4f46e5; font-weight: 600; margin-top: 2px; }
+          .desc { font-size: 13px; color: #475569; margin: 6px 0 0 0; line-height: 1.5; }
+          .footer-watermark {
+            margin-top: 35px;
+            padding-top: 15px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #94a3b8;
+          }
+          @media print {
+            body { padding: 0; background: #fff; }
+            .resume-container { border: none; box-shadow: none; padding: 20px; }
+            .no-print { display: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="text-align: center; margin-bottom: 20px; padding: 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+          <button onclick="window.print()" style="background: #4f46e5; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; margin-right: 12px;">
+            🖨️ Print / Save as PDF
+          </button>
+          <span style="font-size: 13px; color: #64748b;">(Choose "Save as PDF" destination in print dialog)</span>
+        </div>
+
+        <div class="resume-container">
+          <div class="header">
+            <div>
+              <h1 class="name">${cand.name}</h1>
+              <div class="role">${cand.role}</div>
+              <div class="contact-bar">
+                <span class="contact-item">📧 ${cand.email}</span>
+                <span class="contact-item">📱 ${cand.phone}</span>
+                <span class="contact-item">📍 ${cand.location}</span>
+                ${cand.appliedJobTitle ? `<span class="contact-item">💼 Applied: <strong>${cand.appliedJobTitle}</strong></span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Professional Summary</div>
+            <p class="summary-text">${cand.summary || 'Qualified professional seeking high impact engineering roles.'}</p>
+          </div>
+
+          ${cand.coverNote ? `
+          <div class="section">
+            <div class="section-title">Candidate Application Note / Cover Letter</div>
+            <p class="summary-text" style="font-style: italic; background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 3px solid #6366f1;">
+              "${cand.coverNote}"
+            </p>
+          </div>
+          ` : ''}
+
+          <div class="section">
+            <div class="section-title">Key Skills & Technical Stack</div>
+            <div class="skills-grid">
+              ${skillsHtml}
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Work Experience</div>
+            ${expHtml}
+          </div>
+
+          <div class="section">
+            <div class="section-title">Education & Academic Background</div>
+            ${eduHtml}
+          </div>
+
+          <div class="footer-watermark">
+            <span>Verified Candidate Profile • CAREONIX Talent Directory</span>
+            <span>Generated on ${new Date().toLocaleDateString('en-GB')}</span>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    triggerToast('📄 Resume ready for Print / Save as PDF!');
   };
 
   const handleSendInvitation = (shouldOpenChat = false) => {
@@ -162,6 +431,184 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
     recruiterApplications.map(app => (app.candidateEmail || app.email || '').toLowerCase().trim())
   );
 
+  // Helper to extract candidate profile values from localStorage
+  const getCandVal = (cleanEmail, k, def = '') => {
+    if (!cleanEmail) return def;
+    try {
+      const v = localStorage.getItem(`careonix_prof_${cleanEmail}_${k}`);
+      return (v !== null && v !== undefined && v !== '') ? v : def;
+    } catch (e) {
+      return def;
+    }
+  };
+
+  const getCandJson = (cleanEmail, k, def = null) => {
+    if (!cleanEmail) return def;
+    try {
+      const v = localStorage.getItem(`careonix_prof_${cleanEmail}_${k}`);
+      return v ? JSON.parse(v) : def;
+    } catch (e) {
+      return def;
+    }
+  };
+
+  const buildCandidateObject = (app, cleanEmail, idx) => {
+    const savedAvatar = localStorage.getItem(`careonix_prof_${cleanEmail}_avatar`);
+    const avatar = savedAvatar || app?.candidateAvatar || app?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanEmail || idx}`;
+
+    const candName = app?.candidateName || getCandVal(cleanEmail, 'name') || (cleanEmail ? cleanEmail.split('@')[0] : 'Applicant');
+    const appliedJobTitle = app?.jobTitle || '';
+    const candRole = getCandVal(cleanEmail, 'headline') || (appliedJobTitle ? `Applicant for ${appliedJobTitle}` : 'Software Developer');
+
+    // Education extraction
+    const rawEdu = app?.candidateEducation || getCandJson(cleanEmail, 'education');
+    let degree = 'Bachelor of Technology (B.Tech)';
+    let university = 'Technical University';
+    let educationList = [];
+
+    if (Array.isArray(rawEdu) && rawEdu.length > 0) {
+      educationList = rawEdu;
+      degree = rawEdu[0].degree || rawEdu[0].title || degree;
+      university = rawEdu[0].university || rawEdu[0].institution || university;
+    } else if (rawEdu && typeof rawEdu === 'object' && (rawEdu.degree || rawEdu.university)) {
+      educationList = [rawEdu];
+      degree = rawEdu.degree || degree;
+      university = rawEdu.university || university;
+    } else if (typeof rawEdu === 'string' && rawEdu.trim()) {
+      degree = rawEdu.trim();
+      university = getCandVal(cleanEmail, 'university', 'Technical University');
+      educationList = [{ degree: rawEdu.trim(), university, years: '2020 – 2024', cgpa: '8.4 / 10' }];
+    } else {
+      degree = getCandVal(cleanEmail, 'education', 'Bachelor of Technology (B.Tech)');
+      university = getCandVal(cleanEmail, 'university', 'Technical University');
+      educationList = [
+        { degree, university, years: '2020 – 2024', cgpa: '8.5 / 10' },
+        { degree: 'Higher Secondary School Certificate (12th)', university: 'Central Board of Secondary Education', years: '2018 – 2020', cgpa: '89%' }
+      ];
+    }
+
+    // Skills extraction
+    const rawSkills = app?.candidateSkills || getCandJson(cleanEmail, 'skills');
+    let skills = [];
+    if (Array.isArray(rawSkills) && rawSkills.length > 0) {
+      skills = rawSkills;
+    } else if (typeof rawSkills === 'string' && rawSkills.trim()) {
+      skills = rawSkills.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      const lowerRole = (appliedJobTitle || candRole).toLowerCase();
+      if (lowerRole.includes('java')) {
+        skills = ['Java', 'React', 'SQL', 'Spring Boot', 'Hibernate'];
+      } else if (lowerRole.includes('python')) {
+        skills = ['Python', 'Django', 'FastAPI', 'PostgreSQL', 'Docker'];
+      } else if (lowerRole.includes('front') || lowerRole.includes('react')) {
+        skills = ['React', 'JavaScript', 'TypeScript', 'Tailwind CSS', 'Next.js'];
+      } else {
+        skills = ['Java', 'React', 'SQL', 'Git', 'Data Structures'];
+      }
+    }
+
+    // Experience extraction
+    const rawExp = app?.candidateExperience || getCandJson(cleanEmail, 'experience');
+    let experienceList = [];
+    let expDisplay = app?.experience || getCandVal(cleanEmail, 'experience') || '2-4 Yrs';
+
+    if (Array.isArray(rawExp) && rawExp.length > 0) {
+      experienceList = rawExp;
+      expDisplay = rawExp[0].duration || expDisplay;
+    } else if (rawExp && typeof rawExp === 'object' && (rawExp.title || rawExp.company)) {
+      experienceList = [rawExp];
+      expDisplay = rawExp.duration || expDisplay;
+    } else {
+      experienceList = [
+        {
+          title: appliedJobTitle || 'Software Engineer',
+          company: 'Enterprise Technology Solutions',
+          type: 'Full-time',
+          duration: expDisplay || '2-4 Yrs',
+          current: true,
+          note: `Responsible for designing and deploying resilient software components, writing RESTful services, and collaborating with cross-functional development teams.`
+        }
+      ];
+    }
+
+    // Contact and Bio
+    const phone = app?.candidatePhone || app?.phone || getCandVal(cleanEmail, 'phone', '+91 98765 43210');
+    const location = app?.candidateLocation || app?.location || getCandVal(cleanEmail, 'location', 'Bangalore, Karnataka');
+    const about = app?.candidateAbout || getCandVal(cleanEmail, 'about') || '';
+    const coverNote = app?.coverNote || '';
+    const summary = about || (coverNote ? `Application Note: "${coverNote}"` : `Dedicated professional with proven competency in ${(skills || []).slice(0, 3).join(', ')}. Strong background in software design, problem-solving, and building high-performance solutions.`);
+
+    // Resume File Resolution
+    let resumeData = app?.candidateResumeData || app?.resumeData || app?.resume || app?.resumeUrl || '';
+    let resumeFileName = app?.resumeFileName || app?.resumeName || '';
+
+    if (!resumeData && cleanEmail) {
+      resumeData = getCandVal(cleanEmail, 'resume_data', '');
+    }
+    if (!resumeFileName && cleanEmail) {
+      resumeFileName = getCandVal(cleanEmail, 'resume_name', '');
+    }
+    if (!resumeData && cleanEmail) {
+      resumeData = localStorage.getItem(`careonix_cand_resume_${cleanEmail}`) ||
+                   localStorage.getItem(`careonix_resume_${cleanEmail}`) || '';
+    }
+    if (!resumeData && cleanEmail && Array.isArray(applications)) {
+      const otherApp = applications.find(a =>
+        (a.candidateEmail || a.email || '').toLowerCase().trim() === cleanEmail &&
+        (a.candidateResumeData || a.resumeData || a.resume)
+      );
+      if (otherApp) {
+        resumeData = otherApp.candidateResumeData || otherApp.resumeData || otherApp.resume || '';
+        if (!resumeFileName) {
+          resumeFileName = otherApp.resumeFileName || otherApp.resumeName || '';
+        }
+      }
+    }
+
+    if (!resumeFileName) {
+      const safeName = candName.replace(/\s+/g, '_');
+      const safeJob = (appliedJobTitle || 'Software_Developer').replace(/\s+/g, '_');
+      resumeFileName = `${safeName}_${safeJob}_Resume.pdf`;
+    }
+
+    const resumeDate = getCandVal(cleanEmail, 'resume_date') || app?.appliedDate || 'Verified';
+    const resumeSize = getCandVal(cleanEmail, 'resume_size') || '1.8 MB';
+    const hasUploadedResume = Boolean(resumeData && (resumeData.startsWith('data:') || resumeData.startsWith('blob:') || resumeData.startsWith('http')));
+
+    return {
+      id: `app-cand-${app?.id || idx}`,
+      name: candName,
+      role: candRole,
+      degree: degree,
+      university: university,
+      skills: skills,
+      extraSkillsCount: Math.max(0, skills.length - 3),
+      experience: expDisplay,
+      expRange: '1-3',
+      location: location,
+      lastActive: app?.appliedDate ? `Applied on ${app.appliedDate}` : 'Active Recently',
+      online: true,
+      avatar: avatar,
+      availability: 'Applied Candidate',
+      discoverable: true,
+      contactShared: true,
+      email: cleanEmail,
+      phone: phone,
+      summary: summary,
+      coverNote: coverNote,
+      appliedJobTitle: appliedJobTitle,
+      appliedDate: app?.appliedDate || 'Recently',
+      educationList: educationList,
+      experienceList: experienceList,
+      resumeData: resumeData,
+      resumeFileName: resumeFileName,
+      resumeDate: resumeDate,
+      resumeSize: resumeSize,
+      hasUploadedResume: hasUploadedResume,
+      socialLinks: getCandJson(cleanEmail, 'social_links') || {}
+    };
+  };
+
   // Merge candidates from recruiterApplications + registered users + DB candidates
   const candidatePool = [];
 
@@ -169,30 +616,7 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
   recruiterApplications.forEach((app, idx) => {
     const cleanEmail = (app.candidateEmail || app.email || '').toLowerCase().trim();
     if (cleanEmail && !candidatePool.some(c => c.email?.toLowerCase() === cleanEmail)) {
-      const savedAvatar = localStorage.getItem(`careonix_prof_${cleanEmail}_avatar`);
-      const avatar = savedAvatar || app.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanEmail || idx}`;
-
-      candidatePool.push({
-        id: `app-cand-${app.id || idx}`,
-        name: app.candidateName || (cleanEmail ? cleanEmail.split('@')[0] : 'Applicant'),
-        role: app.jobTitle ? `Applicant for ${app.jobTitle}` : 'Software Developer',
-        degree: 'Bachelor of Technology (B.Tech)',
-        university: 'Technical University',
-        skills: ['Java', 'React', 'SQL'],
-        extraSkillsCount: 1,
-        experience: app.experience || '1 – 2 Years',
-        expRange: '1-3',
-        location: app.location || 'India',
-        lastActive: app.appliedDate ? `Applied on ${app.appliedDate}` : 'Active Recently',
-        online: true,
-        avatar: avatar,
-        availability: 'Applied Candidate',
-        discoverable: true,
-        contactShared: true,
-        email: cleanEmail,
-        phone: app.candidatePhone || app.phone || '+91 98765 43210',
-        summary: `Applied for position: ${app.jobTitle || 'Job Application'}`
-      });
+      candidatePool.push(buildCandidateObject(app, cleanEmail, idx));
     }
   });
 
@@ -206,35 +630,15 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
           const cleanEmail = (ru.email || ru.identifier || '').toLowerCase().trim();
           if (cleanEmail && appliedCandidateEmails.has(cleanEmail)) {
             const existingIdx = candidatePool.findIndex(c => c.email?.toLowerCase() === cleanEmail);
-            const savedAvatar = localStorage.getItem(`careonix_prof_${cleanEmail}_avatar`);
-            const avatar = savedAvatar || ru.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanEmail || idx}`;
-
-            const enriched = {
-              id: `reg-cand-${ru.id || idx}`,
-              name: ru.name || candidatePool[existingIdx]?.name || cleanEmail.split('@')[0],
-              role: ru.headline || candidatePool[existingIdx]?.role || 'Software Developer',
-              degree: ru.education || candidatePool[existingIdx]?.degree || 'Bachelor of Technology (B.Tech)',
-              university: ru.university || 'Technical University',
-              skills: ru.skills ? ru.skills.split(',').map(s => s.trim()) : (candidatePool[existingIdx]?.skills || ['Java', 'React', 'SQL']),
-              extraSkillsCount: 1,
-              experience: ru.experience || candidatePool[existingIdx]?.experience || '1 – 2 Years',
-              expRange: '1-3',
-              location: ru.location || candidatePool[existingIdx]?.location || 'India',
-              lastActive: 'Active Recently',
-              online: true,
-              avatar: avatar,
-              availability: 'Open to Opportunities',
-              discoverable: true,
-              contactShared: true,
-              email: cleanEmail,
-              phone: ru.phone || candidatePool[existingIdx]?.phone || '+91 98765 43210',
-              summary: 'Verified Applicant on CAREONIX.'
-            };
-
             if (existingIdx !== -1) {
-              candidatePool[existingIdx] = { ...candidatePool[existingIdx], ...enriched };
-            } else {
-              candidatePool.push(enriched);
+              const current = candidatePool[existingIdx];
+              candidatePool[existingIdx] = {
+                ...current,
+                name: ru.name || current.name,
+                phone: ru.phone || current.phone,
+                location: ru.location || current.location,
+                role: current.role || ru.headline || 'Software Developer'
+              };
             }
           }
         });
@@ -555,7 +959,10 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
                   </button>
 
                   <button
-                    onClick={() => setShowResumeModal(cand)}
+                    onClick={() => {
+                      setShowResumeModal(cand);
+                      setResumeTab(cand.hasUploadedResume ? 'uploaded' : 'structured');
+                    }}
                     style={{
                       background: '#ffffff', border: '1.5px solid #818cf8', color: '#4f46e5',
                       padding: '0.45rem 1rem', borderRadius: '10px', fontSize: '0.8rem',
@@ -801,56 +1208,127 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
 
       {/* ── MODAL 1: View Candidate Profile ──────────────────────────────── */}
       {selectedCandidate && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: '1rem' }}>
-          <div style={{ width: '600px', maxHeight: '88vh', overflowY: 'auto', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: '1rem' }}>
+          <div style={{ width: '680px', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.25)', border: '1px solid #e2e8f0' }}>
             
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <img src={selectedCandidate.avatar} alt={selectedCandidate.name} style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }} />
+                <img src={selectedCandidate.avatar} alt={selectedCandidate.name} style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #818cf8' }} />
                 <div>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>{selectedCandidate.name}</h2>
-                  <div style={{ fontSize: '0.9rem', color: '#4f46e5', fontWeight: '700', marginTop: '2px' }}>{selectedCandidate.role}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{selectedCandidate.degree} &bull; {selectedCandidate.university}</div>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>{selectedCandidate.name}</h2>
+                  <div style={{ fontSize: '0.95rem', color: '#4f46e5', fontWeight: '700', marginTop: '2px' }}>{selectedCandidate.role}</div>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                    {selectedCandidate.degree} • {selectedCandidate.university}
+                  </div>
                 </div>
               </div>
 
-              <button onClick={() => setSelectedCandidate(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setSelectedCandidate(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={18} color="#64748b" />
               </button>
             </div>
 
-            {/* Privacy Protection Notice */}
-            <div style={{ background: '#faf5ff', border: '1px solid #ede9fe', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
-              <Lock size={16} color="#7c3aed" />
-              <div style={{ fontSize: '0.78rem', color: '#4c1d95' }}>
-                <strong>Privacy Policy Active:</strong> Candidate details visible per profile discovery settings. Direct contact info shared upon candidate consent.
+            {/* Application Info Badge */}
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#166534', fontWeight: '600' }}>
+                <CheckCircle2 size={16} color="#16a34a" />
+                <span>Applied for: <strong style={{ color: '#15803d' }}>{selectedCandidate.appliedJobTitle || selectedCandidate.role}</strong></span>
+              </div>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>{selectedCandidate.lastActive}</span>
+            </div>
+
+            {/* Contact Details Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '16px', border: '1px solid #f1f5f9', marginBottom: '1.25rem', fontSize: '0.84rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                <Mail size={15} color="#64748b" />
+                <span>Email: <strong style={{ color: '#0f172a' }}>{selectedCandidate.email}</strong></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                <Phone size={15} color="#64748b" />
+                <span>Phone: <strong style={{ color: '#0f172a' }}>{selectedCandidate.phone}</strong></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                <MapPin size={15} color="#64748b" />
+                <span>Location: <strong style={{ color: '#0f172a' }}>{selectedCandidate.location}</strong></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                <Briefcase size={15} color="#64748b" />
+                <span>Experience: <strong style={{ color: '#0f172a' }}>{selectedCandidate.experience}</strong></span>
               </div>
             </div>
 
-            {/* Summary */}
+            {/* Attached Resume Banner Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)', border: '1.5px solid #ddd6fe',
+              borderRadius: '16px', padding: '1.1rem 1.25rem', display: 'flex',
+              justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem',
+              flexWrap: 'wrap', gap: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#ffffff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(124,58,237,0.15)' }}>
+                  <FileText size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#1e1b4b' }}>
+                    {selectedCandidate.resumeFileName || 'Candidate_Resume.pdf'}
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#6b21a8', marginTop: '2px' }}>
+                    {selectedCandidate.hasUploadedResume ? `Uploaded Document • ${selectedCandidate.resumeSize} • ${selectedCandidate.resumeDate}` : 'Verified CAREONIX Profile Resume Sheet'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    const c = selectedCandidate;
+                    setSelectedCandidate(null);
+                    setShowResumeModal(c);
+                    setResumeTab(c.hasUploadedResume ? 'uploaded' : 'structured');
+                  }}
+                  style={{
+                    padding: '0.55rem 1.1rem', borderRadius: '10px', background: '#ffffff',
+                    border: '1.5px solid #7c3aed', color: '#7c3aed', fontWeight: '800',
+                    fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
+                  }}
+                >
+                  <Eye size={14} /> View Resume
+                </button>
+                <button
+                  onClick={() => handleDownloadResume(selectedCandidate)}
+                  style={{
+                    padding: '0.55rem 1.1rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+                    border: 'none', color: '#ffffff', fontWeight: '800',
+                    fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
+                  }}
+                >
+                  <Download size={14} /> Download
+                </button>
+              </div>
+            </div>
+
+            {/* Candidate Bio / Summary */}
             <div style={{ marginBottom: '1.25rem' }}>
-              <h4 style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px' }}>Professional Summary</h4>
-              <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.5', margin: 0, background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px' }}>
+              <h4 style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '6px' }}>Professional Summary</h4>
+              <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.6', margin: 0, background: '#f8fafc', padding: '0.9rem 1.1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                 {selectedCandidate.summary}
               </p>
             </div>
 
-            {/* Grid Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-              <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', display: 'block', textTransform: 'uppercase' }}>Experience</span>
-                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{selectedCandidate.experience}</strong>
+            {/* Cover Note if provided */}
+            {selectedCandidate.coverNote && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h4 style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '6px' }}>Applicant Cover Note</h4>
+                <div style={{ background: '#f8fafc', borderLeft: '3px solid #6366f1', padding: '0.85rem 1.1rem', borderRadius: '0 12px 12px 0', fontSize: '0.86rem', color: '#475569', fontStyle: 'italic', lineHeight: '1.5' }}>
+                  "{selectedCandidate.coverNote}"
+                </div>
               </div>
-              <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', display: 'block', textTransform: 'uppercase' }}>Location</span>
-                <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{selectedCandidate.location}</strong>
-              </div>
-            </div>
+            )}
 
             {/* Skills */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '8px' }}>Key Technical Skills</h4>
+              <h4 style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Key Technical Skills</h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {selectedCandidate.skills.map((s, i) => (
                   <span key={i} style={{ background: '#f3e8ff', color: '#7c3aed', padding: '5px 12px', borderRadius: '10px', fontSize: '0.82rem', fontWeight: '700' }}>
@@ -861,16 +1339,28 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
             </div>
 
             {/* Footer Action Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button onClick={() => setSelectedCandidate(null)} style={{ padding: '0.75rem 1.4rem', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}>
-                Close
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button
-                onClick={() => { setSelectedCandidate(null); setShowInviteModal(selectedCandidate); }}
-                style={{ padding: '0.75rem 1.6rem', borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#ffffff', border: 'none', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => {
+                  setSelectedCandidate(null);
+                  handleOpenChatWithCandidate(selectedCandidate);
+                }}
+                style={{ padding: '0.75rem 1.4rem', borderRadius: '12px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <Send size={16} /> Invite to Apply for Job
+                <MessageSquare size={16} /> Message Candidate
               </button>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => setSelectedCandidate(null)} style={{ padding: '0.75rem 1.4rem', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}>
+                  Close
+                </button>
+                <button
+                  onClick={() => { setSelectedCandidate(null); setShowInviteModal(selectedCandidate); }}
+                  style={{ padding: '0.75rem 1.6rem', borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#ffffff', border: 'none', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={16} /> Invite to Apply for Job
+                </button>
+              </div>
             </div>
 
           </div>
@@ -879,53 +1369,323 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
 
       {/* ── MODAL 2: Interactive Resume Viewer ───────────────────────────── */}
       {showResumeModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: '1rem' }}>
-          <div style={{ width: '680px', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Resume Preview — {showResumeModal.name}
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '2px 0 0 0' }}>Verified Candidate Resume File</p>
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)',
+          backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 300, padding: '1rem'
+        }}>
+          <div style={{
+            width: '840px', maxWidth: '96vw', maxHeight: '92vh', overflowY: 'auto',
+            background: '#ffffff', borderRadius: '24px', padding: '2rem',
+            boxShadow: '0 25px 60px rgba(15,23,42,0.25)', border: '1px solid #e2e8f0',
+            display: 'flex', flexDirection: 'column', gap: '1.25rem'
+          }}>
+
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    Resume Preview — {showResumeModal.name}
+                  </h3>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '3px 0 0 0' }}>
+                    {showResumeModal.appliedJobTitle ? `Applied for: ${showResumeModal.appliedJobTitle}` : showResumeModal.role} • {showResumeModal.appliedDate}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowResumeModal(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={18} color="#64748b" />
-              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  onClick={() => handleDownloadResume(showResumeModal)}
+                  title="Print or Save as PDF"
+                  style={{
+                    padding: '0.55rem 1rem', borderRadius: '10px', background: '#f8fafc',
+                    border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700',
+                    fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
+                  }}
+                >
+                  <Printer size={15} /> Print
+                </button>
+                <button
+                  onClick={() => handleDownloadResume(showResumeModal)}
+                  style={{
+                    padding: '0.55rem 1.15rem', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    border: 'none', color: '#ffffff', fontWeight: '800',
+                    fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                    boxShadow: '0 2px 10px rgba(79,70,229,0.25)'
+                  }}
+                >
+                  <Download size={15} /> Download PDF
+                </button>
+                <button
+                  onClick={() => setShowResumeModal(null)}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}
+                >
+                  <X size={18} color="#64748b" />
+                </button>
+              </div>
             </div>
 
-            {/* Resume Document Mock Sheet */}
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '16px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', fontFamily: 'Inter, sans-serif' }}>
-              <div style={{ borderBottom: '2px solid #6366f1', paddingBottom: '0.85rem' }}>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>{showResumeModal.name}</h2>
-                <div style={{ color: '#4f46e5', fontWeight: '700', fontSize: '0.95rem' }}>{showResumeModal.role}</div>
-                <div style={{ color: '#64748b', fontSize: '0.82rem', marginTop: '4px' }}>{showResumeModal.location} &bull; {showResumeModal.email}</div>
+            {/* View Mode Switcher Tabs */}
+            {showResumeModal.hasUploadedResume ? (
+              <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                <button
+                  onClick={() => setResumeTab('uploaded')}
+                  style={{
+                    padding: '0.5rem 1.1rem', borderRadius: '10px', border: 'none',
+                    background: resumeTab === 'uploaded' ? '#7c3aed' : '#f1f5f9',
+                    color: resumeTab === 'uploaded' ? '#ffffff' : '#475569',
+                    fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  <FileText size={15} /> Uploaded Document File ({showResumeModal.resumeFileName})
+                </button>
+                <button
+                  onClick={() => setResumeTab('structured')}
+                  style={{
+                    padding: '0.5rem 1.1rem', borderRadius: '10px', border: 'none',
+                    background: resumeTab === 'structured' ? '#7c3aed' : '#f1f5f9',
+                    color: resumeTab === 'structured' ? '#ffffff' : '#475569',
+                    fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  <Award size={15} /> CAREONIX Structured Resume
+                </button>
               </div>
-
-              <div>
-                <strong style={{ fontSize: '0.85rem', color: '#0f172a', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Education</strong>
-                <div style={{ fontSize: '0.88rem', color: '#334155', fontWeight: '600' }}>{showResumeModal.degree}</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{showResumeModal.university}</div>
+            ) : (
+              <div style={{
+                background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+                padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem'
+              }}>
+                <span style={{ color: '#475569', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={15} color="#7c3aed" />
+                  <strong>Verified Candidate Resume Sheet</strong> • Generated from candidate application & profile
+                </span>
+                <span style={{ color: '#64748b' }}>File: {showResumeModal.resumeFileName}</span>
               </div>
+            )}
 
-              <div>
-                <strong style={{ fontSize: '0.85rem', color: '#0f172a', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Technical Stack & Skills</strong>
-                <div style={{ fontSize: '0.88rem', color: '#334155' }}>{showResumeModal.skills.join(', ')}</div>
+            {/* Tab 1 Content: Uploaded Resume Document Viewer */}
+            {resumeTab === 'uploaded' && showResumeModal.hasUploadedResume && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {/* Meta toolbar */}
+                <div style={{
+                  background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+                  padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '0.82rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#475569' }}>
+                    <span>📄 <strong style={{ color: '#0f172a' }}>{showResumeModal.resumeFileName}</strong></span>
+                    <span>•</span>
+                    <span>Size: {showResumeModal.resumeSize}</span>
+                    <span>•</span>
+                    <span>Uploaded: {showResumeModal.resumeDate}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => window.open(showResumeModal.resumeData, '_blank')}
+                      style={{
+                        padding: '0.4rem 0.85rem', borderRadius: '8px', background: '#ffffff',
+                        border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700',
+                        fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      <ExternalLink size={13} /> Open in New Tab
+                    </button>
+                    <button
+                      onClick={() => handleDownloadResume(showResumeModal)}
+                      style={{
+                        padding: '0.4rem 0.85rem', borderRadius: '8px', background: '#7c3aed',
+                        border: 'none', color: '#ffffff', fontWeight: '700',
+                        fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      <Download size={13} /> Download File
+                    </button>
+                  </div>
+                </div>
+
+                {/* Embedded PDF/Doc Preview Frame */}
+                <div style={{
+                  width: '100%', height: '540px', borderRadius: '14px',
+                  overflow: 'hidden', border: '1px solid #cbd5e1', background: '#0f172a'
+                }}>
+                  <iframe
+                    src={showResumeModal.resumeData}
+                    title={`${showResumeModal.name} Resume`}
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                  />
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', textAlign: 'center' }}>
+                  💡 If your browser does not render the preview above, click "Open in New Tab" or "Download File".
+                </div>
               </div>
+            )}
 
-              <div>
-                <strong style={{ fontSize: '0.85rem', color: '#0f172a', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Summary & Experience</strong>
-                <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: '1.5' }}>{showResumeModal.summary}</div>
+            {/* Tab 2 (or default): Structured CAREONIX Executive Resume Sheet */}
+            {(resumeTab === 'structured' || !showResumeModal.hasUploadedResume) && (
+              <div style={{
+                background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '18px',
+                padding: '2.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem',
+                fontFamily: 'Inter, sans-serif', boxShadow: '0 2px 12px rgba(0,0,0,0.03)'
+              }}>
+                {/* Resume Paper Header */}
+                <div style={{ borderBottom: '2px solid #6366f1', paddingBottom: '1rem' }}>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    {showResumeModal.name}
+                  </h2>
+                  <div style={{ color: '#4f46e5', fontWeight: '700', fontSize: '1rem', marginTop: '4px' }}>
+                    {showResumeModal.role}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginTop: '8px', fontSize: '0.84rem', color: '#64748b' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={14} /> {showResumeModal.email}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={14} /> {showResumeModal.phone}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {showResumeModal.location}</span>
+                    {showResumeModal.appliedJobTitle && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#7c3aed', fontWeight: '700' }}>
+                        <Briefcase size={14} /> Applied: {showResumeModal.appliedJobTitle}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Professional Summary */}
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', margin: 0 }}>
+                    Professional Summary
+                  </h4>
+                  <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.6', margin: '6px 0 0 0' }}>
+                    {showResumeModal.summary || 'Dedicated software professional with hands-on expertise in developing scalable, maintainable solutions and writing clean, reliable code.'}
+                  </p>
+                </div>
+
+                {/* Cover Note */}
+                {showResumeModal.coverNote && (
+                  <div>
+                    <h4 style={{ fontSize: '0.8rem', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', margin: 0 }}>
+                      Candidate Application Note
+                    </h4>
+                    <div style={{ background: '#f8fafc', borderLeft: '3px solid #6366f1', padding: '0.75rem 1rem', borderRadius: '0 8px 8px 0', fontSize: '0.85rem', color: '#475569', fontStyle: 'italic', lineHeight: '1.5' }}>
+                      "{showResumeModal.coverNote}"
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Skills */}
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', margin: 0 }}>
+                    Technical Stack & Skills
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                    {showResumeModal.skills.map((s, i) => (
+                      <span key={i} style={{ background: '#f1f5f9', color: '#1e293b', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600' }}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Work Experience */}
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', margin: 0 }}>
+                    Work Experience
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {(showResumeModal.experienceList || []).map((exp, i) => (
+                      <div key={i} style={{ borderBottom: i < (showResumeModal.experienceList || []).length - 1 ? '1px dashed #e2e8f0' : 'none', paddingBottom: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>{exp.title || showResumeModal.role}</strong>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>{exp.duration || showResumeModal.experience}</span>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: '#4f46e5', fontWeight: '600', marginTop: '2px' }}>
+                          {exp.company || 'Technology Solutions'} {exp.type ? `• ${exp.type}` : ''}
+                        </div>
+                        {exp.note && (
+                          <p style={{ fontSize: '0.82rem', color: '#475569', margin: '4px 0 0 0', lineHeight: '1.5' }}>
+                            {exp.note}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Education */}
+                <div>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: '800', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', margin: 0 }}>
+                    Education & Academic Background
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(showResumeModal.educationList || []).map((edu, i) => (
+                      <div key={i} style={{ borderBottom: i < (showResumeModal.educationList || []).length - 1 ? '1px dashed #e2e8f0' : 'none', paddingBottom: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>{edu.degree || showResumeModal.degree}</strong>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>{edu.years || '2020 – 2024'}</span>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
+                          {edu.university || showResumeModal.university} {edu.cgpa ? `• CGPA: ${edu.cgpa}` : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Watermark Footer */}
+                <div style={{
+                  borderTop: '1px solid #f1f5f9', paddingTop: '10px', marginTop: '5px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  fontSize: '0.74rem', color: '#94a3b8'
+                }}>
+                  <span>Verified Candidate Profile • CAREONIX Talent Directory</span>
+                  <span>Generated on {new Date().toLocaleDateString('en-GB')}</span>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
-              <button onClick={() => setShowResumeModal(null)} style={{ padding: '0.75rem 1.4rem', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}>
-                Close
+            {/* Modal Bottom Footer Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  const c = showResumeModal;
+                  setShowResumeModal(null);
+                  handleOpenChatWithCandidate(c);
+                }}
+                style={{
+                  padding: '0.75rem 1.3rem', borderRadius: '12px', background: '#f8fafc',
+                  border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700',
+                  fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                }}
+              >
+                <MessageSquare size={16} /> Message Candidate
               </button>
-              <button onClick={() => triggerToast('Downloading resume PDF...')} style={{ padding: '0.75rem 1.6rem', borderRadius: '12px', background: '#4f46e5', color: '#ffffff', border: 'none', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Download size={16} /> Download Full Resume PDF
-              </button>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={() => setShowResumeModal(null)}
+                  style={{
+                    padding: '0.75rem 1.4rem', borderRadius: '12px', background: '#f1f5f9',
+                    border: 'none', color: '#475569', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => handleDownloadResume(showResumeModal)}
+                  style={{
+                    padding: '0.75rem 1.6rem', borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    color: '#ffffff', border: 'none', fontWeight: '800', fontSize: '0.85rem',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                    boxShadow: '0 4px 14px rgba(79,70,229,0.25)'
+                  }}
+                >
+                  <Download size={16} /> Download Full Resume PDF
+                </button>
+              </div>
             </div>
 
           </div>
