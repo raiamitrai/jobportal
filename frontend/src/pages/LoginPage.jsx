@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { getSettings } from '../utils/settingsManager';
 import careonixLogo from '../assets/careonix-logo-transparent.png';
+import loginIllustration from '../assets/login-3d-transparent.png';
 
 const GOOGLE_CLIENT_ID = '2829663012-gi9u6ejtn5n4ftb26l3ain40qsucv6t1.apps.googleusercontent.com';
 
@@ -1164,7 +1165,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
             {/* 3D Illustration at Bottom Left (100% Transparent PNG) */}
             <div style={{ marginTop: '0.1rem', display: 'flex', alignItems: 'center' }}>
               <img
-                src="/login-3d-transparent.png"
+                src={loginIllustration}
                 alt="Careonix 3D Portal Illustration"
                 style={{
                   width: '180px',
