@@ -260,15 +260,17 @@ function AuthenticatedApp({ tab }) {
     const applyMatch = location.pathname.match(/^\/candidate\/jobs\/[^/]+\/apply$/);
     const adminSettingsMatch = location.pathname.startsWith('/admin/settings');
     const candidateProfileMatch = location.pathname.startsWith('/candidate/profile');
-    return tab || (applyMatch ? 'jobs' : adminSettingsMatch ? 'settings' : candidateProfileMatch ? 'profile' : PATH_TO_TAB[location.pathname]) || sessionStorage.getItem('careonix_active_tab') || 'dashboard';
+    const recruiterSettingsMatch = location.pathname.startsWith('/recruiter/settings');
+    return tab || (applyMatch ? 'jobs' : adminSettingsMatch ? 'settings' : recruiterSettingsMatch ? 'settings' : candidateProfileMatch ? 'profile' : PATH_TO_TAB[location.pathname]) || sessionStorage.getItem('careonix_active_tab') || 'dashboard';
   });
 
   useEffect(() => {
-    // Dynamic route matching for apply pages, admin settings, and candidate profile subtabs
+    // Dynamic route matching for apply pages, admin settings, candidate profile, and recruiter settings subtabs
     const applyMatch = location.pathname.match(/^\/candidate\/jobs\/[^/]+\/apply$/);
     const adminSettingsMatch = location.pathname.startsWith('/admin/settings');
     const candidateProfileMatch = location.pathname.startsWith('/candidate/profile');
-    const currentTab = tab || (applyMatch ? 'jobs' : adminSettingsMatch ? 'settings' : candidateProfileMatch ? 'profile' : PATH_TO_TAB[location.pathname]) || 'dashboard';
+    const recruiterSettingsMatch = location.pathname.startsWith('/recruiter/settings');
+    const currentTab = tab || (applyMatch ? 'jobs' : adminSettingsMatch ? 'settings' : recruiterSettingsMatch ? 'settings' : candidateProfileMatch ? 'profile' : PATH_TO_TAB[location.pathname]) || 'dashboard';
     setActiveTabState(currentTab);
     try {
       sessionStorage.setItem('careonix_active_tab', currentTab);
@@ -566,6 +568,7 @@ function AppContent() {
       <Route path="/recruiter/analytics" element={isAuthenticated ? <AuthenticatedApp tab="analytics" /> : <Navigate to="/login" replace />} />
       <Route path="/recruiter/notifications" element={isAuthenticated ? <AuthenticatedApp tab="notifications" /> : <Navigate to="/login" replace />} />
       <Route path="/recruiter/settings" element={isAuthenticated ? <AuthenticatedApp tab="settings" /> : <Navigate to="/login" replace />} />
+      <Route path="/recruiter/settings/:subTab" element={isAuthenticated ? <AuthenticatedApp tab="settings" /> : <Navigate to="/login" replace />} />
 
       {/* ── CANDIDATE DEDICATED ROUTES ── */}
       <Route path="/candidate" element={isAuthenticated ? <AuthenticatedApp tab="dashboard" /> : <Navigate to="/login" replace />} />
