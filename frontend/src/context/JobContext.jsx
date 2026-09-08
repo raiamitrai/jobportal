@@ -254,7 +254,7 @@ export function JobProvider({ children }) {
           return !(id >= 1724500001 && id <= 1724500099);
         });
 
-        // Merge: server/backend jobs first, then overlay local real jobs
+        // Merge: server/backend jobs vs local jobs by updatedAt timestamp
         const mergedMap = new Map();
         incomingJobs.forEach(bj => {
           const id = Number(bj.id);
@@ -262,23 +262,50 @@ export function JobProvider({ children }) {
           if (id >= 1724500001 && id <= 1724500099) return;
           mergedMap.set(String(bj.id), bj);
         });
-        localJobs.forEach(lj => mergedMap.set(String(lj.id), { ...(mergedMap.get(String(lj.id)) || {}), ...lj }));
+
+        let hasLocalNewer = false;
+        localJobs.forEach(lj => {
+          const idKey = String(lj.id);
+          const serverJob = mergedMap.get(idKey);
+          if (!serverJob) {
+            // Local job not yet on server
+            mergedMap.set(idKey, lj);
+            hasLocalNewer = true;
+          } else {
+            const localTime = Number(lj.updatedAt || lj.id || 0);
+            const serverTime = Number(serverJob.updatedAt || serverJob.id || 0);
+            if (localTime > serverTime) {
+              mergedMap.set(idKey, { ...serverJob, ...lj });
+              hasLocalNewer = true;
+            } else {
+              // Server has newest status (CLOSED, ACTIVE, etc.) — server wins!
+              mergedMap.set(idKey, serverJob);
+            }
+          }
+        });
 
         const finalMerged = Array.from(mergedMap.values());
-        // Update state always (including when empty, so stale data is cleared)
-        setJobs(finalMerged);
+        setJobs(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(finalMerged)) {
+            return finalMerged;
+          }
+          return prev;
+        });
+
         try {
           localStorage.setItem('careonix_posted_jobs', JSON.stringify(finalMerged));
         } catch (e) {}
 
-        // Push merged list to /api/shared-jobs so all browsers stay in sync
-        try {
-          fetch('/api/shared-jobs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(finalMerged)
-          }).catch(() => {});
-        } catch (e) {}
+        // Only push to server if local had strictly newer changes, avoiding stale overwrite loops
+        if (hasLocalNewer) {
+          try {
+            fetch('/api/shared-jobs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(finalMerged)
+            }).catch(() => {});
+          } catch (e) {}
+        }
       } catch (e) {}
     };
 
@@ -483,6 +510,7 @@ export function JobProvider({ children }) {
 
     const newJob = {
       id: Date.now(),
+      updatedAt: Date.now(),
       title: jobData.title,
       company: jobData.company || (publisherUser?.company || 'Careonix Partner'),
       location: jobData.location || 'Remote / India',
@@ -564,6 +592,7 @@ export function JobProvider({ children }) {
 
         return {
           ...j,
+          updatedAt: Date.now(),
           title: updatedData.title || j.title,
           company: updatedData.company || j.company,
           location: updatedData.location || j.location,
@@ -599,9 +628,10 @@ export function JobProvider({ children }) {
 
   const updateJobStatus = (jobId, newStatus) => {
     const statusUpper = (newStatus || 'ACTIVE').toUpperCase();
+    const now = Date.now();
     const updatedJobs = jobs.map(j => {
       if (String(j.id) === String(jobId)) {
-        return { ...j, status: statusUpper };
+        return { ...j, status: statusUpper, updatedAt: now };
       }
       return j;
     });

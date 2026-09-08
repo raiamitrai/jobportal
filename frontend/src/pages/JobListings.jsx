@@ -622,7 +622,7 @@ const POPULAR_SKILLS = [
 ];
 
 // ─── Admin Jobs Directory View (100% Match with Reference UI Screenshot) ──────
-function AdminJobsDirectory({ onPostJobClick }) {
+function AdminJobsDirectory({ onPostJobClick, onEditJob }) {
   const { jobs, applications, updateJobStatusByAdmin, updateJobStatus, deleteJob } = useJobs();
   const [adminTab, setAdminTab] = useState('All Jobs');
   const [searchQuery, setSearchQuery] = useState('');
@@ -641,9 +641,14 @@ function AdminJobsDirectory({ onPostJobClick }) {
   // Derive job items dynamically from real JobContext state (NO DUMMY FAKE JOBS HARDCODED)
   const adminJobsList = (jobs || []).map((j, idx) => {
     const rawStatus = (j.status || 'ACTIVE').toUpperCase();
+    const isExpired = isJobExpired(j.lastDateToApply);
+    const isManuallyClosed = rawStatus === 'CLOSED' || rawStatus === 'INACTIVE';
+    const isClosed = isManuallyClosed || isExpired;
+    const isPending = rawStatus === 'PENDING' || rawStatus === 'PENDING_APPROVAL';
+
     let displayStatus = 'Active';
-    if (rawStatus === 'PENDING' || rawStatus === 'PENDING_APPROVAL') displayStatus = 'Pending';
-    else if (rawStatus === 'CLOSED' || rawStatus === 'INACTIVE') displayStatus = 'Closed';
+    if (isPending) displayStatus = 'Pending';
+    else if (isClosed) displayStatus = 'Closed';
     else if (rawStatus === 'REPORTED') displayStatus = 'Reported';
     else displayStatus = 'Active';
 
@@ -669,6 +674,10 @@ function AdminJobsDirectory({ onPostJobClick }) {
       applicantsCount: appsForJob.length || j.applications || 0,
       newApplicantsCount: appsForJob.filter(a => a.status === 'APPLIED' || a.status === 'PENDING').length || 0,
       postedDate: j.postedDate || 'Recent',
+      lastDateToApply: j.lastDateToApply,
+      isExpired,
+      isManuallyClosed,
+      isClosed,
       status: displayStatus,
       rawStatus: rawStatus,
       avatarBg: avatarBg,
@@ -708,7 +717,15 @@ function AdminJobsDirectory({ onPostJobClick }) {
   const adminStartIndex = (adminPage - 1) * pageSize;
   const paginatedAdminJobs = filteredAdminJobs.slice(adminStartIndex, adminStartIndex + pageSize);
 
-  const handleActivateJob = (jobId, title) => {
+  const handleActivateJob = (jobId, title, rawJob) => {
+    const target = rawJob || jobs.find(j => String(j.id) === String(jobId));
+    if (target && isJobExpired(target.lastDateToApply)) {
+      alert(`Job "${title}" application deadline has expired (${formatJobDate(target.lastDateToApply)}). Please extend the deadline date to today or a future date to reopen applications.`);
+      if (onEditJob) {
+        onEditJob(target);
+      }
+      return;
+    }
     if (updateJobStatus) updateJobStatus(jobId, 'ACTIVE');
     else if (updateJobStatusByAdmin) updateJobStatusByAdmin(jobId, 'ACTIVE');
     triggerToast(`🟢 Job "${title}" activated & open for applications!`);
@@ -813,7 +830,7 @@ function AdminJobsDirectory({ onPostJobClick }) {
             <div>
               <span style={{ fontSize: '0.76rem', fontWeight: '700', color: '#64748b', display: 'block' }}>Pending Approval</span>
               <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.1 }}>
-                {(jobs || []).filter(j => (j.status || '').toUpperCase() === 'PENDING').length}
+                {(jobs || []).filter(j => ((j.status || '').toUpperCase() === 'PENDING' || (j.status || '').toUpperCase() === 'PENDING_APPROVAL') && !isJobExpired(j.lastDateToApply)).length}
               </div>
             </div>
           </div>
@@ -828,7 +845,7 @@ function AdminJobsDirectory({ onPostJobClick }) {
             <div>
               <span style={{ fontSize: '0.76rem', fontWeight: '700', color: '#64748b', display: 'block' }}>Active Jobs</span>
               <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.1 }}>
-                {(jobs || []).filter(j => (j.status || 'ACTIVE').toUpperCase() === 'ACTIVE').length}
+                {(jobs || []).filter(j => (j.status || 'ACTIVE').toUpperCase() === 'ACTIVE' && !isJobExpired(j.lastDateToApply) && (j.status || '').toUpperCase() !== 'CLOSED' && (j.status || '').toUpperCase() !== 'INACTIVE').length}
               </div>
             </div>
           </div>
@@ -843,7 +860,7 @@ function AdminJobsDirectory({ onPostJobClick }) {
             <div>
               <span style={{ fontSize: '0.76rem', fontWeight: '700', color: '#64748b', display: 'block' }}>Closed Jobs</span>
               <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.1 }}>
-                {(jobs || []).filter(j => (j.status || '').toUpperCase() === 'CLOSED' || (j.status || '').toUpperCase() === 'INACTIVE').length}
+                {(jobs || []).filter(j => (j.status || '').toUpperCase() === 'CLOSED' || (j.status || '').toUpperCase() === 'INACTIVE' || isJobExpired(j.lastDateToApply)).length}
               </div>
             </div>
         </div>
@@ -1051,21 +1068,66 @@ function AdminJobsDirectory({ onPostJobClick }) {
                 </td>
 
                 {/* Posted On */}
-                <td style={{ color: '#475569', fontSize: '0.8rem', fontWeight: '600' }}>{j.postedDate}</td>
+                <td>
+                  <div style={{ color: '#475569', fontSize: '0.8rem', fontWeight: '600' }}>{j.postedDate}</div>
+                  {j.lastDateToApply && (
+                    <div style={{ fontSize: '0.72rem', color: j.isClosed ? '#dc2626' : '#64748b', fontWeight: j.isClosed ? '700' : '500', marginTop: '2px' }}>
+                      Due: {formatJobDate(j.lastDateToApply)}
+                    </div>
+                  )}
+                </td>
 
                 {/* Status Badge */}
                 <td>
-                  <span style={{
-                    background: j.status === 'Active' ? '#dcfce7' : (j.status === 'Pending' ? '#fef3c7' : '#f1f5f9'),
-                    color: j.status === 'Active' ? '#15803d' : (j.status === 'Pending' ? '#b45309' : '#64748b'),
-                    border: `1px solid ${j.status === 'Active' ? '#bbf7d0' : (j.status === 'Pending' ? '#fde68a' : '#cbd5e1')}`,
-                    padding: '3px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: '800'
-                  }}>
-                    {j.status}
-                  </span>
+                  {j.isClosed ? (
+                    <span style={{
+                      background: '#fef2f2',
+                      color: '#dc2626',
+                      border: '1px solid #fecaca',
+                      padding: '3px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.74rem',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <Lock size={11} /> {j.isExpired ? 'Closed • Expired' : 'Closed'}
+                    </span>
+                  ) : j.status === 'Pending' ? (
+                    <span style={{
+                      background: '#fef3c7',
+                      color: '#b45309',
+                      border: '1px solid #fde68a',
+                      padding: '3px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.74rem',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <Clock size={11} /> Pending
+                    </span>
+                  ) : (
+                    <span style={{
+                      background: '#dcfce7',
+                      color: '#15803d',
+                      border: '1px solid #bbf7d0',
+                      padding: '3px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.74rem',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <CheckCircle2 size={11} /> Active
+                    </span>
+                  )}
                 </td>
 
-                {/* Action Buttons: Eye + Active/Close + Delete (Strictly No Edit) */}
+                {/* Action Buttons: Eye + Edit + Active/Close + Delete */}
                 <td style={{ textAlign: 'right', padding: '0.85rem 0' }}>
                   <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end' }}>
                     {/* View Details Button */}
@@ -1089,10 +1151,33 @@ function AdminJobsDirectory({ onPostJobClick }) {
                       <Eye size={15} />
                     </button>
 
-                    {/* Active / Close Button for Admin */}
-                    {j.status === 'Closed' ? (
+                    {/* Edit Button for Admin */}
+                    {onEditJob && (
                       <button
-                        onClick={() => handleActivateJob(j.id, j.title)}
+                        onClick={() => onEditJob(j.rawJob)}
+                        style={{
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '8px',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#2563eb',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Edit job details, status & deadline"
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                    )}
+
+                    {/* Active / Close Button for Admin */}
+                    {j.isClosed ? (
+                      <button
+                        onClick={() => handleActivateJob(j.id, j.title, j.rawJob)}
                         style={{
                           background: '#ecfdf5',
                           border: '1.5px solid #6ee7b7',
@@ -1108,14 +1193,14 @@ function AdminJobsDirectory({ onPostJobClick }) {
                           boxShadow: '0 1px 4px rgba(16,185,129,0.15)',
                           whiteSpace: 'nowrap'
                         }}
-                        title="Activate job - candidates can apply again"
+                        title={j.isExpired ? "Deadline has expired. Click to extend deadline & activate" : "Activate job - candidates can apply again"}
                       >
-                        <Unlock size={12} /> Active
+                        <Unlock size={12} /> Activate
                       </button>
                     ) : j.status === 'Pending' ? (
                       <div style={{ display: 'inline-flex', gap: '4px' }}>
                         <button
-                          onClick={() => handleActivateJob(j.id, j.title)}
+                          onClick={() => handleActivateJob(j.id, j.title, j.rawJob)}
                           style={{
                             background: '#ecfdf5',
                             border: '1.5px solid #6ee7b7',
@@ -1776,9 +1861,24 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
   if (role === 'admin') {
     return (
       <>
-        <AdminJobsDirectory onPostJobClick={() => setShowPostModal(true)} />
+        <AdminJobsDirectory onPostJobClick={() => setShowPostModal(true)} onEditJob={startEdit} />
         {showPostModal && (
           <JobModal title="Post New Job Vacancy" form={postForm} setForm={setPostForm} onSubmit={handlePostSubmit} onClose={() => setShowPostModal(false)} submitLabel="🚀 Publish Job" success={postSuccess} step={postStep} setStep={setPostStep} appMethod={postAppMethod} setAppMethod={setPostAppMethod} />
+        )}
+        {editingJob && (
+          <JobModal
+            title="Edit Job Posting"
+            form={editForm}
+            setForm={setEditForm}
+            onSubmit={handleEditSubmit}
+            onClose={() => setEditingJob(null)}
+            submitLabel="✅ Save Changes"
+            success={editSuccess}
+            isEdit={true}
+            step={2}
+            appMethod={editForm.applicationMethod || postAppMethod}
+            setAppMethod={(m) => setEditForm(f => ({ ...f, applicationMethod: m }))}
+          />
         )}
       </>
     );

@@ -16,10 +16,12 @@ import {
   Trash2,
   Share2,
   Eye,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 import { useJobs } from '../context/JobContext';
 import CompanyLogo from '../components/CompanyLogo';
+import { isJobExpired } from '../utils/timeAgo';
 
 export default function SavedJobsPage({ setActiveTab }) {
   const { jobs, savedJobs, toggleSaveJob } = useJobs();
@@ -44,6 +46,8 @@ export default function SavedJobsPage({ setActiveTab }) {
   
   const allSaved = contextSavedJobs.map(j => {
     const formattedSaveDate = j.savedDate || `Saved on ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    const isExpired = isJobExpired(j.lastDateToApply);
+    const isClosed = (j.status || '').toUpperCase() === 'CLOSED' || (j.status || '').toUpperCase() === 'INACTIVE' || isExpired;
     return {
       id: j.id,
       title: j.title,
@@ -54,6 +58,9 @@ export default function SavedJobsPage({ setActiveTab }) {
       experience: j.experience || '1-3 Yrs',
       salary: j.salary || '₹10,00,000 - ₹18,00,000',
       savedDate: formattedSaveDate,
+      lastDateToApply: j.lastDateToApply,
+      isExpired,
+      isClosed,
       skills: Array.isArray(j.skills) ? j.skills : (j.skills ? j.skills.split(',') : []),
       verified: true,
       applyUrl: j.applyUrl || '#'
@@ -318,26 +325,47 @@ export default function SavedJobsPage({ setActiveTab }) {
 
                     {/* COL 3: Apply Now + Filled Purple Bookmark + Overflow Menu */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, marginTop: viewMode === 'grid' ? '0.75rem' : 0 }}>
-                      <a
-                        href={job.applyUrl || '#'}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          padding: '0.65rem 1.25rem',
-                          background: '#4f46e5',
-                          color: '#ffffff',
-                          borderRadius: '10px',
-                          fontWeight: '700',
-                          fontSize: '0.86rem',
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          boxShadow: '0 4px 12px rgba(79,70,229,0.2)'
-                        }}
-                      >
-                        Apply Now <ExternalLink size={14} />
-                      </a>
+                      {job.isClosed ? (
+                        <button
+                          disabled
+                          style={{
+                            padding: '0.65rem 1.25rem',
+                            background: '#f1f5f9',
+                            color: '#94a3b8',
+                            borderRadius: '10px',
+                            border: '1px solid #cbd5e1',
+                            fontWeight: '700',
+                            fontSize: '0.86rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            cursor: 'not-allowed'
+                          }}
+                        >
+                          <Lock size={14} /> {job.isExpired ? 'Deadline Passed' : 'Closed'}
+                        </button>
+                      ) : (
+                        <a
+                          href={job.applyUrl || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            padding: '0.65rem 1.25rem',
+                            background: '#4f46e5',
+                            color: '#ffffff',
+                            borderRadius: '10px',
+                            fontWeight: '700',
+                            fontSize: '0.86rem',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            boxShadow: '0 4px 12px rgba(79,70,229,0.2)'
+                          }}
+                        >
+                          Apply Now <ExternalLink size={14} />
+                        </a>
+                      )}
 
                       {/* Filled Purple Bookmark Icon Button (Instant Remove) */}
                       <button

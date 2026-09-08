@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobContext';
+import { isJobExpired } from '../utils/timeAgo';
 
 export default function AdminDashboard({ setActiveTab }) {
   const { registeredUsers, user, approveRecruiter, rejectRecruiter } = useAuth();
@@ -100,9 +101,9 @@ export default function AdminDashboard({ setActiveTab }) {
     };
   }, [jobs]);
 
-  const activeJobsCount = (jobs || []).filter(j => (j.status || 'ACTIVE').toUpperCase() === 'ACTIVE').length;
-  const pendingJobsCount = (jobs || []).filter(j => (j.status || '').toUpperCase() === 'PENDING').length;
-  const inactiveJobsCount = (jobs || []).filter(j => (j.status || '').toUpperCase() === 'INACTIVE' || (j.status || '').toUpperCase() === 'CLOSED').length;
+  const activeJobsCount = (jobs || []).filter(j => (j.status || 'ACTIVE').toUpperCase() === 'ACTIVE' && !isJobExpired(j.lastDateToApply) && (j.status || '').toUpperCase() !== 'CLOSED' && (j.status || '').toUpperCase() !== 'INACTIVE').length;
+  const pendingJobsCount = (jobs || []).filter(j => ((j.status || '').toUpperCase() === 'PENDING' || (j.status || '').toUpperCase() === 'PENDING_APPROVAL') && !isJobExpired(j.lastDateToApply)).length;
+  const inactiveJobsCount = (jobs || []).filter(j => (j.status || '').toUpperCase() === 'INACTIVE' || (j.status || '').toUpperCase() === 'CLOSED' || isJobExpired(j.lastDateToApply)).length;
   const totalAppsCount = (applications || []).length;
   const interviewsCount = (applications || []).filter(a => (a.status || '').toUpperCase() === 'INTERVIEW').length;
   const hiresCount = (applications || []).filter(a => (a.status || '').toUpperCase() === 'HIRED' || (a.status || '').toUpperCase() === 'ACCEPTED').length;

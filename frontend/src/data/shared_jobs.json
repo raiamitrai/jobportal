@@ -1,5 +1,35 @@
 [
   {
+    "id": 1788900883387,
+    "title": "web developer",
+    "company": "TCS",
+    "location": "Bangalore, Karnataka",
+    "currency": "INR",
+    "salary": "₹100000 - 200000",
+    "type": "Internship",
+    "experience": "2-4 Yrs",
+    "lastDateToApply": "2026-09-24",
+    "skills": [
+      "HTML",
+      "CSS",
+      "Js",
+      "Bootstarap",
+      "Java",
+      "Spring Boot",
+      "React",
+      "MySQL"
+    ],
+    "applicationMethod": "external",
+    "applyUrl": "https://www.tata.com/careers/jobs",
+    "source": "www.tata.com",
+    "logoUrl": null,
+    "verified": true,
+    "status": "ACTIVE",
+    "applications": 0,
+    "postedBy": "serope7216@murkstar.com",
+    "postedDate": "Sep 9, 2026"
+  },
+  {
     "id": 1788899645331,
     "title": "laravel",
     "company": "TCS",
@@ -23,7 +53,7 @@
     "source": "www.linkedin.com",
     "logoUrl": null,
     "verified": true,
-    "status": "PENDING",
+    "status": "CLOSED",
     "applications": 0,
     "postedBy": "serope7216@murkstar.com",
     "postedDate": "Sep 9, 2026"
@@ -49,7 +79,7 @@
     "source": "jobs.google.com",
     "logoUrl": null,
     "verified": true,
-    "status": "PENDING",
+    "status": "CLOSED",
     "applications": 1,
     "postedBy": "wifoben326@murkstar.com",
     "postedDate": "Sep 5, 2026"
@@ -75,7 +105,7 @@
     "source": "www.tcs.com",
     "logoUrl": null,
     "verified": true,
-    "status": "ACTIVE",
+    "status": "CLOSED",
     "applications": 1,
     "postedBy": "serope7216@murkstar.com",
     "postedDate": "Aug 26, 2026"
