@@ -82,10 +82,6 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen = false, onClo
   const userNotifications = getNotificationsForUser ? getNotificationsForUser(emailClean, role) : [];
   const unreadNotifCount = userNotifications.filter(n => !n.read).length;
 
-  const portalSubtitle = role === 'admin'
-    ? 'Admin Operations'
-    : (role === 'recruiter' ? 'Recruiter Portal' : 'Candidate Portal');
-
   // Candidate Menu Items
   const candidateMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -133,18 +129,34 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen = false, onClo
       >
         <div>
           {/* Brand Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.25rem 1rem 0.25rem', borderBottom: `1px solid ${isAdmin ? '#1e293b' : '#f1f5f9'}`, marginBottom: '1.15rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', flex: 1 }}>
-              <div style={{ borderRadius: '14px', overflow: 'hidden', width: '100%', background: isAdmin ? '#ffffff' : 'transparent', padding: isAdmin ? '4px 8px' : '0' }}>
-                <img
-                  src={careonixBrandLogo}
-                  alt="CAREONIX Logo"
-                  style={{ width: '100%', maxHeight: '38px', objectFit: 'contain', display: 'block' }}
-                />
-              </div>
-              <div style={{ fontSize: '0.74rem', color: isAdmin ? '#818cf8' : '#7c3aed', fontWeight: '800', letterSpacing: '0.01em' }}>
-                {role === 'admin' ? 'Admin Portal' : portalSubtitle}
-              </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 0.25rem 1.15rem 0.25rem',
+            borderBottom: `1px solid ${isAdmin ? '#1e293b' : '#f1f5f9'}`,
+            marginBottom: '1.25rem'
+          }}>
+            <div style={{
+              borderRadius: '12px',
+              overflow: 'hidden',
+              flex: 1,
+              background: isAdmin ? '#ffffff' : 'transparent',
+              padding: isAdmin ? '4px 10px' : '0',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <img
+                src={careonixBrandLogo}
+                alt="CAREONIX"
+                style={{
+                  width: '100%',
+                  maxHeight: '40px',
+                  objectFit: 'contain',
+                  objectPosition: 'left center',
+                  display: 'block'
+                }}
+              />
             </div>
 
             {/* Mobile Close Button */}
