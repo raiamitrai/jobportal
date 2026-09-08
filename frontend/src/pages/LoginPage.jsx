@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSettings } from '../utils/settingsManager';
-import { isTwoFactorEnabled, recordLoginEvent } from '../utils/loginActivityUtils';
+import { isTwoFactorEnabled, recordLoginEvent, getTwoFactorPin } from '../utils/loginActivityUtils';
 import careonixLogo from '../assets/careonix-logo-transparent.png';
 import loginIllustration from '../assets/login-3d-transparent.png';
 
@@ -79,8 +79,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
   const [show2FALoginModal, setShow2FALoginModal] = useState(false);
   const [pending2FAUser, setPending2FAUser] = useState(null);
   const [twoFactorDigits, setTwoFactorDigits] = useState(['', '', '', '', '', '']);
-  const [twoFactorExpectedCode, setTwoFactorExpectedCode] = useState('123456');
-  const [twoFactorLoginTimer, setTwoFactorLoginTimer] = useState(60);
+  const [twoFactorExpectedCode, setTwoFactorExpectedCode] = useState('');
   const [twoFactorLoginError, setTwoFactorLoginError] = useState('');
   const [twoFactorVerifying, setTwoFactorVerifying] = useState(false);
 
@@ -128,15 +127,6 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
     return () => clearInterval(interval);
   }, [showForgotModal, forgotStep, forgotTimer]);
 
-  // ── 2FA Login OTP timer ────────────────────────────────────
-  useEffect(() => {
-    let interval = null;
-    if (show2FALoginModal && twoFactorLoginTimer > 0) {
-      interval = setInterval(() => setTwoFactorLoginTimer(prev => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [show2FALoginModal, twoFactorLoginTimer]);
-
   const handle2FADigitInput = (index, value) => {
     if (!/^\d*$/.test(value)) return;
     const updated = [...twoFactorDigits];
@@ -157,11 +147,11 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
   const handleVerify2FALogin = () => {
     const entered = twoFactorDigits.join('');
     if (entered.length < 6) {
-      setTwoFactorLoginError('Please enter the full 6-digit verification code.');
+      setTwoFactorLoginError('Please enter your full 6-digit Security PIN.');
       return;
     }
-    if (entered !== twoFactorExpectedCode && entered !== '123456') {
-      setTwoFactorLoginError(`❌ Invalid 6-digit code. Please enter the valid code (Demo: ${twoFactorExpectedCode} or 123456).`);
+    if (!twoFactorExpectedCode || entered !== twoFactorExpectedCode) {
+      setTwoFactorLoginError('❌ Incorrect Security PIN. Please enter the exact 6-digit PIN you configured in your Recruiter Settings.');
       return;
     }
 
@@ -173,15 +163,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       }
       setShow2FALoginModal(false);
       setTwoFactorVerifying(false);
-    }, 400);
-  };
-
-  const handleResend2FACode = () => {
-    const freshCode = String(Math.floor(100000 + Math.random() * 900000));
-    setTwoFactorExpectedCode(freshCode);
-    setTwoFactorDigits(['', '', '', '', '', '']);
-    setTwoFactorLoginTimer(60);
-    setTwoFactorLoginError('');
+    }, 300);
   };
 
   // ── Google Identity Services init ─────────────────────────
@@ -559,12 +541,11 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
 
       // Check if user has Two-Factor Authentication (2FA) enabled
       if (isTwoFactorEnabled(emailLower)) {
-        const freshCode = String(Math.floor(100000 + Math.random() * 900000));
-        setTwoFactorExpectedCode(freshCode);
+        const configuredPin = getTwoFactorPin(emailLower);
+        setTwoFactorExpectedCode(configuredPin || '');
         setPending2FAUser({ ...existingUser, accountType: registeredType });
         setTwoFactorDigits(['', '', '', '', '', '']);
         setTwoFactorLoginError('');
-        setTwoFactorLoginTimer(60);
         setShow2FALoginModal(true);
         return;
       }
@@ -2523,49 +2504,11 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
                   fontSize: '0.78rem',
                   fontWeight: '700',
                   color: '#334155',
-                  marginBottom: '1rem',
+                  marginBottom: '1.25rem',
                 }}
               >
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
                 Signing in as: <span style={{ color: '#4338ca' }}>{pending2FAUser?.email || email}</span>
-              </div>
-
-              {/* Demo / Verification Code Tip */}
-              <div
-                style={{
-                  background: '#eef2ff',
-                  border: '1px dashed #818cf8',
-                  borderRadius: '12px',
-                  padding: '0.65rem 1rem',
-                  marginBottom: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ textAlign: 'left' }}>
-                  <span style={{ fontSize: '0.72rem', color: '#4338ca', fontWeight: '800', textTransform: 'uppercase', display: 'block' }}>
-                    🔑 Verification Code
-                  </span>
-                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                    Enter generated code or use <strong style={{ color: '#312e81' }}>123456</strong>
-                  </span>
-                </div>
-                <span
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '1rem',
-                    fontWeight: '900',
-                    color: '#4338ca',
-                    background: '#ffffff',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #c7d2fe',
-                    letterSpacing: '0.05em'
-                  }}
-                >
-                  {twoFactorExpectedCode}
-                </span>
               </div>
 
               {twoFactorLoginError && (
@@ -2575,8 +2518,8 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
                     border: '1px solid #fecaca',
                     color: '#dc2626',
                     borderRadius: '10px',
-                    padding: '0.55rem 0.85rem',
-                    marginBottom: '1rem',
+                    padding: '0.6rem 0.85rem',
+                    marginBottom: '1.25rem',
                     fontWeight: '700',
                     fontSize: '0.8rem',
                     display: 'flex',
@@ -2585,18 +2528,18 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
                     gap: '6px',
                   }}
                 >
-                  <AlertCircle size={14} />
+                  <AlertCircle size={15} />
                   <span>{twoFactorLoginError}</span>
                 </div>
               )}
 
-              {/* 6-Digit OTP Boxes */}
+              {/* 6-Digit PIN Boxes */}
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1.25rem' }}>
                 {twoFactorDigits.map((digit, idx) => (
                   <input
                     key={idx}
                     id={`twofa-input-${idx}`}
-                    type="text"
+                    type="password"
                     maxLength={1}
                     value={digit}
                     onChange={e => handle2FADigitInput(idx, e.target.value)}
@@ -2605,8 +2548,8 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
                       width: '46px',
                       height: '52px',
                       textAlign: 'center',
-                      fontSize: '1.35rem',
-                      fontWeight: '800',
+                      fontSize: '1.4rem',
+                      fontWeight: '900',
                       background: '#fff',
                       border: digit ? '2px solid #4f46e5' : '2px solid #cbd5e1',
                       borderRadius: '12px',
@@ -2620,28 +2563,9 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
                 ))}
               </div>
 
-              {/* Timer & Resend */}
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
-                  {twoFactorLoginTimer > 0 ? `Code expires in ${twoFactorLoginTimer}s` : 'Code expired'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleResend2FACode}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#4f46e5',
-                    fontWeight: '800',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0,
-                  }}
-                >
-                  Regenerate Code
-                </button>
-              </div>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 1.5rem 0', lineHeight: 1.4 }}>
+                🔒 Enter the confidential 6-digit Security PIN you configured in your Recruiter Settings.
+              </p>
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '0.75rem' }}>

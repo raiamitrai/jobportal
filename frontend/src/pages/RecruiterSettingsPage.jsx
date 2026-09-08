@@ -49,6 +49,7 @@ import {
   clearOtherSessions,
   exportLoginHistoryCSV,
   isTwoFactorEnabled,
+  getTwoFactorPin,
   setTwoFactorEnabledState
 } from '../utils/loginActivityUtils';
 
@@ -158,7 +159,9 @@ export default function RecruiterSettingsPage() {
   // ── TAB 3: Privacy & Security State ──
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(() => isTwoFactorEnabled(userEmail));
   const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorConfirmCode, setTwoFactorConfirmCode] = useState('');
   const [twoFactorModalError, setTwoFactorModalError] = useState('');
   const [sessionTimeout, setSessionTimeout] = useState(() => getStorageJson('sessionTimeout', '30 Minutes'));
   const [showActiveSessionsModal, setShowActiveSessionsModal] = useState(false);
@@ -1020,10 +1023,15 @@ export default function RecruiterSettingsPage() {
                 Two-factor authentication adds an extra layer of security to your recruiter account by requiring a 6-digit verification code in addition to your password.
               </p>
 
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => setShow2FAModal(true)}
+                  onClick={() => {
+                    setTwoFactorCode('');
+                    setTwoFactorConfirmCode('');
+                    setTwoFactorModalError('');
+                    setShow2FAModal(true);
+                  }}
                   style={{
                     padding: '0.65rem 1.25rem', borderRadius: '10px',
                     background: twoFactorEnabled ? '#fef2f2' : '#6366f1',
@@ -1034,6 +1042,28 @@ export default function RecruiterSettingsPage() {
                 >
                   {twoFactorEnabled ? 'Disable 2FA Security' : 'Configure & Enable 2FA'}
                 </button>
+
+                {twoFactorEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTwoFactorCode('');
+                      setTwoFactorConfirmCode('');
+                      setTwoFactorModalError('');
+                      setShowChangePinModal(true);
+                    }}
+                    style={{
+                      padding: '0.65rem 1.25rem', borderRadius: '10px',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '6px'
+                    }}
+                  >
+                    <Key size={14} /> Change 2FA PIN
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1695,39 +1725,59 @@ export default function RecruiterSettingsPage() {
               <Shield size={28} />
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-              {twoFactorEnabled ? 'Disable Two-Factor Authentication?' : 'Enable Two-Factor Authentication'}
+              {twoFactorEnabled ? 'Disable Two-Factor Authentication?' : 'Set Your 6-Digit 2FA Security PIN'}
             </h3>
             <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: '6px', lineHeight: '1.5' }}>
               {twoFactorEnabled
-                ? 'Disabling 2FA removes the 6-digit security code challenge from your recruiter sign-in.'
-                : 'Protect your candidate data and recruiter portal with 2FA verification on every sign-in.'}
+                ? 'Disabling 2FA removes the confidential 6-digit PIN requirement from your recruiter sign-in.'
+                : 'Create a confidential 6-digit PIN. Only this exact PIN will allow you to sign in to your recruiter account.'}
             </p>
 
             {twoFactorModalError && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.5rem 0.8rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '700', marginTop: '0.75rem' }}>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.55rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '700', marginTop: '0.75rem', textAlign: 'left' }}>
                 {twoFactorModalError}
               </div>
             )}
 
             {!twoFactorEnabled && (
-              <div style={{ margin: '1.25rem 0', background: '#f8fafc', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
-                <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '700', marginBottom: '6px' }}>
-                  Authenticator Setup Key: <span style={{ fontFamily: 'monospace', color: '#4f46e5', fontWeight: '800' }}>CRNX-8942-AUTH</span>
+              <div style={{ margin: '1.25rem 0', background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                    Create 6-Digit Security PIN:
+                  </label>
+                  <input
+                    type="password"
+                    maxLength={6}
+                    value={twoFactorCode}
+                    onChange={e => {
+                      setTwoFactorModalError('');
+                      setTwoFactorCode(e.target.value.replace(/\D/g, ''));
+                    }}
+                    placeholder="• • • • • •"
+                    style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.35em', fontSize: '1.3rem', fontWeight: '900' }}
+                  />
                 </div>
-                <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 10px 0' }}>
-                  Enter code <strong style={{ color: '#0f172a' }}>123456</strong> or your Authenticator 6-digit OTP below to verify and activate:
-                </p>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={twoFactorCode}
-                  onChange={e => {
-                    setTwoFactorModalError('');
-                    setTwoFactorCode(e.target.value.replace(/\D/g, ''));
-                  }}
-                  placeholder="123456"
-                  style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.25em', fontSize: '1.15rem', fontWeight: '800' }}
-                />
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                    Confirm 6-Digit Security PIN:
+                  </label>
+                  <input
+                    type="password"
+                    maxLength={6}
+                    value={twoFactorConfirmCode}
+                    onChange={e => {
+                      setTwoFactorModalError('');
+                      setTwoFactorConfirmCode(e.target.value.replace(/\D/g, ''));
+                    }}
+                    placeholder="• • • • • •"
+                    style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.35em', fontSize: '1.3rem', fontWeight: '900' }}
+                  />
+                </div>
+
+                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                  🔒 Note: Memorize this PIN. You will need to enter this exact code on the login page.
+                </span>
               </div>
             )}
 
@@ -1736,6 +1786,8 @@ export default function RecruiterSettingsPage() {
                 type="button"
                 onClick={() => {
                   setShow2FAModal(false);
+                  setTwoFactorCode('');
+                  setTwoFactorConfirmCode('');
                   setTwoFactorModalError('');
                 }}
                 style={{ padding: '0.7rem 1.4rem', borderRadius: '10px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
@@ -1751,15 +1803,20 @@ export default function RecruiterSettingsPage() {
                     setShow2FAModal(false);
                     triggerToast('2FA Security disabled.');
                   } else {
-                    if (!twoFactorCode || twoFactorCode.length < 6) {
-                      setTwoFactorModalError('⚠️ Please enter the 6-digit code (e.g. 123456).');
+                    if (!twoFactorCode || twoFactorCode.length !== 6) {
+                      setTwoFactorModalError('⚠️ Please enter a complete 6-digit Security PIN.');
+                      return;
+                    }
+                    if (twoFactorCode !== twoFactorConfirmCode) {
+                      setTwoFactorModalError('❌ The PIN and Confirm PIN do not match.');
                       return;
                     }
                     setTwoFactorEnabled(true);
-                    setTwoFactorEnabledState(userEmail, true);
+                    setTwoFactorEnabledState(userEmail, true, twoFactorCode);
                     setShow2FAModal(false);
                     setTwoFactorCode('');
-                    triggerToast('🎉 2FA Security enabled successfully! Future logins will require this code.');
+                    setTwoFactorConfirmCode('');
+                    triggerToast('🎉 2FA Security activated! You will need this 6-digit PIN to sign in.');
                   }
                 }}
                 style={{
@@ -1768,7 +1825,102 @@ export default function RecruiterSettingsPage() {
                   color: '#ffffff', border: 'none', fontWeight: '800', cursor: 'pointer'
                 }}
               >
-                {twoFactorEnabled ? 'Confirm Disable' : 'Verify & Enable 2FA'}
+                {twoFactorEnabled ? 'Confirm Disable' : 'Save PIN & Enable 2FA'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: Change 2FA PIN ────────────────────────────────────────────── */}
+      {showChangePinModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 600, padding: '1rem' }}>
+          <div style={{ width: '460px', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+            <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#ede9fe', color: '#7c3aed', margin: '0 auto 1rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Key size={26} />
+            </div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+              Update 2FA Security PIN
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '5px', lineHeight: '1.5' }}>
+              Set a new confidential 6-digit PIN for future sign-ins.
+            </p>
+
+            {twoFactorModalError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '0.55rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '700', marginTop: '0.75rem', textAlign: 'left' }}>
+                {twoFactorModalError}
+              </div>
+            )}
+
+            <div style={{ margin: '1.25rem 0', background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                  New 6-Digit Security PIN:
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={e => {
+                    setTwoFactorModalError('');
+                    setTwoFactorCode(e.target.value.replace(/\D/g, ''));
+                  }}
+                  placeholder="• • • • • •"
+                  style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.35em', fontSize: '1.3rem', fontWeight: '900' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                  Confirm New 6-Digit PIN:
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={twoFactorConfirmCode}
+                  onChange={e => {
+                    setTwoFactorModalError('');
+                    setTwoFactorConfirmCode(e.target.value.replace(/\D/g, ''));
+                  }}
+                  placeholder="• • • • • •"
+                  style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.35em', fontSize: '1.3rem', fontWeight: '900' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangePinModal(false);
+                  setTwoFactorCode('');
+                  setTwoFactorConfirmCode('');
+                  setTwoFactorModalError('');
+                }}
+                style={{ padding: '0.7rem 1.4rem', borderRadius: '10px', background: '#f1f5f9', border: 'none', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!twoFactorCode || twoFactorCode.length !== 6) {
+                    setTwoFactorModalError('⚠️ Please enter a complete 6-digit Security PIN.');
+                    return;
+                  }
+                  if (twoFactorCode !== twoFactorConfirmCode) {
+                    setTwoFactorModalError('❌ The new PIN and Confirm PIN do not match.');
+                    return;
+                  }
+                  setTwoFactorEnabledState(userEmail, true, twoFactorCode);
+                  setShowChangePinModal(false);
+                  setTwoFactorCode('');
+                  setTwoFactorConfirmCode('');
+                  triggerToast('🎉 2FA Security PIN updated successfully!');
+                }}
+                style={{ padding: '0.7rem 1.6rem', borderRadius: '10px', background: '#6366f1', color: '#ffffff', border: 'none', fontWeight: '800', cursor: 'pointer' }}
+              >
+                Update PIN
               </button>
             </div>
           </div>

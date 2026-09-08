@@ -307,19 +307,74 @@ export function isTwoFactorEnabled(userEmail) {
   return false;
 }
 
-// Update 2FA status across all storage entities for synchronization
-export function setTwoFactorEnabledState(userEmail, enabled) {
-  if (!userEmail) return;
+// Get the confidential 6-digit 2FA PIN/Code set by the user
+export function getTwoFactorPin(userEmail) {
+  if (!userEmail) return null;
   const userKey = normalizeUserEmail(userEmail);
   const cleanEmail = userEmail.toLowerCase().trim();
 
+  // 1. Check direct 2FA PIN storage
   try {
-    // 1. Recruiter settings key
+    const p1 = localStorage.getItem(`careonix_2fa_pin_${userKey}`);
+    if (p1 && p1.length === 6) return p1;
+    const p2 = localStorage.getItem(`careonix_2fa_pin_${cleanEmail}`);
+    if (p2 && p2.length === 6) return p2;
+    const p3 = localStorage.getItem(`careonix_recruiter_${userKey}_2fa_pin`);
+    if (p3 && p3.length === 6) return p3;
+  } catch (e) {}
+
+  // 2. Check registered users store
+  try {
+    const reg = localStorage.getItem('careonix_registered_users');
+    if (reg) {
+      const list = JSON.parse(reg);
+      const found = list.find(u => (u.email || u.identifier || '').toLowerCase().trim() === cleanEmail);
+      if (found && found.twoFactorPin && String(found.twoFactorPin).length === 6) {
+        return String(found.twoFactorPin);
+      }
+    }
+  } catch (e) {}
+
+  // 3. Check active session user
+  try {
+    const su = sessionStorage.getItem('careonix_user') || localStorage.getItem('careonix_user');
+    if (su) {
+      const parsed = JSON.parse(su);
+      if ((parsed.email || '').toLowerCase().trim() === cleanEmail && parsed.twoFactorPin) {
+        return String(parsed.twoFactorPin);
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+// Update 2FA status and confidential PIN across all storage entities
+export function setTwoFactorEnabledState(userEmail, enabled, pin = '') {
+  if (!userEmail) return;
+  const userKey = normalizeUserEmail(userEmail);
+  const cleanEmail = userEmail.toLowerCase().trim();
+  const cleanPin = pin ? String(pin).trim() : '';
+
+  try {
+    // 1. Recruiter settings keys
     localStorage.setItem(`careonix_recruiter_${userKey}_2fa_enabled`, JSON.stringify(enabled));
+    if (enabled && cleanPin) {
+      localStorage.setItem(`careonix_recruiter_${userKey}_2fa_pin`, cleanPin);
+    } else if (!enabled) {
+      localStorage.removeItem(`careonix_recruiter_${userKey}_2fa_pin`);
+    }
     
     // 2. Direct 2FA keys
     localStorage.setItem(`careonix_2fa_enabled_${userKey}`, enabled ? 'true' : 'false');
     localStorage.setItem(`careonix_2fa_enabled_${cleanEmail}`, enabled ? 'true' : 'false');
+    if (enabled && cleanPin) {
+      localStorage.setItem(`careonix_2fa_pin_${userKey}`, cleanPin);
+      localStorage.setItem(`careonix_2fa_pin_${cleanEmail}`, cleanPin);
+    } else if (!enabled) {
+      localStorage.removeItem(`careonix_2fa_pin_${userKey}`);
+      localStorage.removeItem(`careonix_2fa_pin_${cleanEmail}`);
+    }
 
     // 3. Update registered users list
     const reg = localStorage.getItem('careonix_registered_users');
@@ -327,7 +382,11 @@ export function setTwoFactorEnabledState(userEmail, enabled) {
       const list = JSON.parse(reg);
       const updated = list.map(u => {
         if ((u.email || u.identifier || '').toLowerCase().trim() === cleanEmail) {
-          return { ...u, twoFactorEnabled: enabled };
+          return {
+            ...u,
+            twoFactorEnabled: enabled,
+            twoFactorPin: enabled && cleanPin ? cleanPin : undefined
+          };
         }
         return u;
       });
@@ -341,6 +400,11 @@ export function setTwoFactorEnabledState(userEmail, enabled) {
         const u = JSON.parse(raw);
         if ((u.email || '').toLowerCase().trim() === cleanEmail) {
           u.twoFactorEnabled = enabled;
+          if (enabled && cleanPin) {
+            u.twoFactorPin = cleanPin;
+          } else if (!enabled) {
+            delete u.twoFactorPin;
+          }
           return JSON.stringify(u);
         }
       } catch (e) {}
