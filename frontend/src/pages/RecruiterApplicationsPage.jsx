@@ -17,7 +17,11 @@ import {
   Sparkles,
   X,
   Star,
-  MessageSquare
+  MessageSquare,
+  GraduationCap,
+  MapPin,
+  Download,
+  Eye
 } from 'lucide-react';
 import { useJobs } from '../context/JobContext';
 import { useAuth } from '../context/AuthContext';
@@ -385,127 +389,292 @@ export default function RecruiterApplicationsPage({ setActiveTab }) {
         </div>
       </div>
 
-      {/* Candidate Resume & Application Modal */}
-      {selectedCandidateApp && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: '1rem' }}>
-          <div style={{ width: '520px', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f3e8ff', color: '#7c3aed', fontSize: '1.3rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {(selectedCandidateApp.candidateName || 'A').charAt(0).toUpperCase()}
+      {/* Candidate Resume & Full Profile Review Modal */}
+      {selectedCandidateApp && (() => {
+        const candEmail = (selectedCandidateApp.candidateEmail || '').toLowerCase().trim();
+        const getCandVal = (k, def = '') => {
+          if (selectedCandidateApp[k] !== undefined && selectedCandidateApp[k] !== null && selectedCandidateApp[k] !== '') {
+            return selectedCandidateApp[k];
+          }
+          try { return localStorage.getItem(`careonix_prof_${candEmail}_${k}`) || def; } catch (e) { return def; }
+        };
+        const getCandJson = (k, def = null) => {
+          if (selectedCandidateApp[k] !== undefined && selectedCandidateApp[k] !== null) {
+            return selectedCandidateApp[k];
+          }
+          try {
+            const v = localStorage.getItem(`careonix_prof_${candEmail}_${k}`);
+            return v ? JSON.parse(v) : def;
+          } catch (e) { return def; }
+        };
+
+        const candSkills = Array.isArray(selectedCandidateApp.candidateSkills) && selectedCandidateApp.candidateSkills.length > 0
+          ? selectedCandidateApp.candidateSkills
+          : getCandJson('skills', []);
+
+        const rawEdu = selectedCandidateApp.candidateEducation || getCandJson('education', []);
+        const candEducations = Array.isArray(rawEdu) ? rawEdu : (rawEdu && (rawEdu.degree || rawEdu.university) ? [rawEdu] : []);
+
+        const rawExp = selectedCandidateApp.candidateExperience || getCandJson('experience', []);
+        const candExperiences = Array.isArray(rawExp) ? rawExp : (rawExp && (rawExp.title || rawExp.company) ? [rawExp] : []);
+
+        const candAbout = selectedCandidateApp.candidateAbout || getCandVal('about', '');
+        const candLocation = selectedCandidateApp.candidateLocation || getCandVal('location', '');
+        const candPreferences = selectedCandidateApp.candidatePreferences || getCandJson('preferences', null);
+        const candResumeName = selectedCandidateApp.resumeFileName || getCandVal('resume_name', 'resume.pdf');
+        const candResumeData = selectedCandidateApp.candidateResumeData || getCandVal('resume_data', '');
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: '1rem' }}>
+            <div style={{ width: '640px', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(15,23,42,0.2)', border: '1px solid #e2e8f0' }}>
+
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#f3e8ff', color: '#7c3aed', fontSize: '1.4rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, overflow: 'hidden' }}>
+                    {(selectedCandidateApp.candidateName || 'C').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      {selectedCandidateApp.candidateName || 'Candidate Profile'}
+                    </h3>
+                    <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '2px 0 0 0' }}>
+                      Applied for <strong style={{ color: '#4f46e5' }}>{selectedCandidateApp.jobTitle}</strong> • {selectedCandidateApp.appliedDate || 'Recently'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                    {selectedCandidateApp.candidateName || 'Candidate'}
-                  </h3>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '2px 0 0 0' }}>
-                    Applied for <strong style={{ color: '#4f46e5' }}>{selectedCandidateApp.jobTitle}</strong>
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedCandidateApp(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={18} color="#64748b" />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', background: '#f8fafc', padding: '1.1rem', borderRadius: '16px', border: '1px solid #f1f5f9', marginBottom: '1.5rem', fontSize: '0.86rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
-                <Mail size={16} color="#64748b" />
-                <span>Email: <strong>{selectedCandidateApp.candidateEmail || 'N/A'}</strong></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
-                <Phone size={16} color="#64748b" />
-                <span>Phone: <strong>{selectedCandidateApp.candidatePhone || 'N/A'}</strong></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
-                <FileText size={16} color="#7c3aed" />
-                <span>Resume: <strong style={{ color: '#7c3aed' }}>{selectedCandidateApp.resumeFileName || 'resume.pdf'}</strong></span>
-              </div>
-            </div>
-
-            {/* Candidate Star Rating (Controlled by Platform Settings) */}
-            {getSettings()?.platform?.enableCandidateRatings !== false && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                  Candidate Star Rating
-                </label>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  {[1, 2, 3, 4, 5].map(star => {
-                    const currentRating = appRatings[selectedCandidateApp.id] || 0;
-                    return (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => handleRateCandidate(selectedCandidateApp.id, star)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'inline-flex' }}
-                      >
-                        <Star
-                          size={22}
-                          fill={star <= currentRating ? '#f59e0b' : 'none'}
-                          color={star <= currentRating ? '#f59e0b' : '#cbd5e1'}
-                        />
-                      </button>
-                    );
-                  })}
-                  <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '700', marginLeft: '6px' }}>
-                    {appRatings[selectedCandidateApp.id] ? `${appRatings[selectedCandidateApp.id]}/5 Stars` : 'Not Rated'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Internal Recruiter Notes (Controlled by Platform Settings) */}
-            {getSettings()?.platform?.enableApplicationNotes !== false && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                  Internal Recruiter Evaluation Notes
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Add private evaluation notes visible only to your team..."
-                  value={appNotes[selectedCandidateApp.id] || ''}
-                  onChange={e => handleSaveNote(selectedCandidateApp.id, e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.84rem', fontFamily: 'Inter, sans-serif', resize: 'vertical' }}
-                />
-              </div>
-            )}
-
-            {selectedCandidateApp.coverNote && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                  Candidate Cover Note
-                </label>
-                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.85rem', fontSize: '0.85rem', color: '#334155', lineHeight: '1.5' }}>
-                  {selectedCandidateApp.coverNote}
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => triggerToast(`📥 Downloading ${selectedCandidateApp.resumeFileName || 'resume.pdf'}...`)}
-                style={{ padding: '0.65rem 1.1rem', borderRadius: '10px', background: '#f3e8ff', border: '1px solid #ddd6fe', color: '#7c3aed', fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer' }}
-              >
-                📥 Download Resume
-              </button>
-              <div style={{ display: 'flex', gap: '0.65rem' }}>
-                <button
-                  onClick={() => {
-                    handleOpenChatWithCandidate(selectedCandidateApp);
-                    setSelectedCandidateApp(null);
-                  }}
-                  style={{ padding: '0.65rem 1.2rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', border: 'none', color: '#ffffff', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <MessageSquare size={15} /> Message Candidate
-                </button>
-                <button onClick={() => setSelectedCandidateApp(null)} style={{ padding: '0.65rem 1.4rem', borderRadius: '10px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', fontWeight: '800', fontSize: '0.86rem', cursor: 'pointer' }}>
-                  Done
+                <button onClick={() => setSelectedCandidateApp(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={18} color="#64748b" />
                 </button>
               </div>
+
+              {/* Contact Details Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', background: '#f8fafc', padding: '1rem 1.2rem', borderRadius: '16px', border: '1px solid #f1f5f9', marginBottom: '1.25rem', fontSize: '0.84rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                  <Mail size={15} color="#64748b" />
+                  <span>Email: <strong>{selectedCandidateApp.candidateEmail || 'N/A'}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                  <Phone size={15} color="#64748b" />
+                  <span>Phone: <strong>{selectedCandidateApp.candidatePhone || getCandVal('phone', 'N/A')}</strong></span>
+                </div>
+                {candLocation && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                    <MapPin size={15} color="#64748b" />
+                    <span>Location: <strong>{candLocation}</strong></span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#334155' }}>
+                  <FileText size={15} color="#7c3aed" />
+                  <span>Resume: <strong style={{ color: '#7c3aed' }}>{candResumeName}</strong></span>
+                </div>
+              </div>
+
+              {/* Candidate Bio / About */}
+              {candAbout && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    Candidate Summary / Bio
+                  </label>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.85rem', fontSize: '0.86rem', color: '#334155', lineHeight: '1.5' }}>
+                    {candAbout}
+                  </div>
+                </div>
+              )}
+
+              {/* Candidate Skills */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                  Technical & Professional Skills ({candSkills.length})
+                </label>
+                {candSkills.length > 0 ? (
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {candSkills.map((sk, i) => (
+                      <span key={i} style={{ background: '#f3e8ff', border: '1px solid #ddd6fe', color: '#6d28d9', padding: '4px 10px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700' }}>
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>No specific skills listed.</span>
+                )}
+              </div>
+
+              {/* Education History */}
+              {candEducations.length > 0 && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                    Education Qualifications
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {candEducations.map((edu, i) => (
+                      <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <GraduationCap size={20} color="#7c3aed" />
+                        <div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a' }}>{edu.degree || 'Degree'}</div>
+                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                            {edu.university || 'College'} {edu.years ? `• ${edu.years}` : ''} {edu.cgpa ? `• ${edu.cgpa}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Work Experience */}
+              {candExperiences.length > 0 && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                    Work Experience & Internships
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {candExperiences.map((exp, i) => (
+                      <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem 1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a' }}>
+                            {exp.title || 'Role'} • {exp.company || 'Company'}
+                          </div>
+                          {exp.duration && <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{exp.duration}</span>}
+                        </div>
+                        {exp.note && <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '4px' }}>{exp.note}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Preferences */}
+              {candPreferences && (candPreferences.roles || candPreferences.location || candPreferences.salary) && (
+                <div style={{ marginBottom: '1.25rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.85rem 1rem' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    Candidate Job Preferences
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.82rem', color: '#334155' }}>
+                    {candPreferences.roles && <span><strong>Target Roles:</strong> {candPreferences.roles}</span>}
+                    {candPreferences.location && <span><strong>Preferred Location:</strong> {candPreferences.location}</span>}
+                    {candPreferences.salary && <span><strong>Expected CTC:</strong> {candPreferences.salary}</span>}
+                    {candPreferences.noticePeriod && <span><strong>Notice Period:</strong> {candPreferences.noticePeriod}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Cover Note */}
+              {selectedCandidateApp.coverNote && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    Candidate Cover Note
+                  </label>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.85rem', fontSize: '0.85rem', color: '#334155', lineHeight: '1.5' }}>
+                    {selectedCandidateApp.coverNote}
+                  </div>
+                </div>
+              )}
+
+              {/* Candidate Star Rating */}
+              {getSettings()?.platform?.enableCandidateRatings !== false && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                    Candidate Star Rating
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const currentRating = appRatings[selectedCandidateApp.id] || 0;
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => handleRateCandidate(selectedCandidateApp.id, star)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'inline-flex' }}
+                        >
+                          <Star
+                            size={22}
+                            fill={star <= currentRating ? '#f59e0b' : 'none'}
+                            color={star <= currentRating ? '#f59e0b' : '#cbd5e1'}
+                          />
+                        </button>
+                      );
+                    })}
+                    <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '700', marginLeft: '6px' }}>
+                      {appRatings[selectedCandidateApp.id] ? `${appRatings[selectedCandidateApp.id]}/5 Stars` : 'Not Rated'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Internal Recruiter Notes */}
+              {getSettings()?.platform?.enableApplicationNotes !== false && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    Internal Recruiter Evaluation Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Add private evaluation notes visible only to your team..."
+                    value={appNotes[selectedCandidateApp.id] || ''}
+                    onChange={e => handleSaveNote(selectedCandidateApp.id, e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.84rem', fontFamily: 'Inter, sans-serif', resize: 'vertical' }}
+                  />
+                </div>
+              )}
+
+              {/* Modal Footer Actions */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => {
+                      if (candResumeData) {
+                        const a = document.createElement('a');
+                        a.href = candResumeData;
+                        a.download = candResumeName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      } else {
+                        triggerToast(`📥 Downloading ${candResumeName}...`);
+                      }
+                    }}
+                    style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: '#f3e8ff', border: '1px solid #ddd6fe', color: '#7c3aed', fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Download size={14} /> Download Resume
+                  </button>
+                  {candResumeData && (
+                    <button
+                      onClick={() => {
+                        const win = window.open();
+                        if (win) {
+                          win.document.write(
+                            `<iframe src="${candResumeData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+                          );
+                        }
+                      }}
+                      style={{ padding: '0.6rem 1rem', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#334155', fontWeight: '700', fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <Eye size={14} color="#4f46e5" /> View Resume
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.65rem' }}>
+                  <button
+                    onClick={() => {
+                      handleOpenChatWithCandidate(selectedCandidateApp);
+                      setSelectedCandidateApp(null);
+                    }}
+                    style={{ padding: '0.65rem 1.2rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', border: 'none', color: '#ffffff', fontWeight: '800', fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <MessageSquare size={15} /> Message Candidate
+                  </button>
+                  <button onClick={() => setSelectedCandidateApp(null)} style={{ padding: '0.65rem 1.4rem', borderRadius: '10px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', fontWeight: '800', fontSize: '0.86rem', cursor: 'pointer' }}>
+                    Done
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

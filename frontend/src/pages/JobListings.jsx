@@ -1405,11 +1405,29 @@ export default function JobListings({ role, setActiveTab, initialShowPostModal =
     e.preventDefault();
     if (!careonixApplyJob || !user?.email) return;
 
+    const uKey = (user?.email || '').toLowerCase().trim();
+    const getUVal = (k, fallback = '') => {
+      try { return localStorage.getItem(`careonix_prof_${uKey}_${k}`) || fallback; } catch (err) { return fallback; }
+    };
+    const getUJson = (k, fallback = null) => {
+      try {
+        const v = localStorage.getItem(`careonix_prof_${uKey}_${k}`);
+        return v ? JSON.parse(v) : fallback;
+      } catch (err) { return fallback; }
+    };
+
     applyToJob(careonixApplyJob.id, user, {
-      name: user?.name || '',
+      name: user?.name || getUVal('name', 'Candidate'),
       email: user?.email,
-      phone: user?.phone || '',
-      resumeFileName: user?.resumeFileName || '',
+      phone: getUVal('phone', user?.phone || ''),
+      location: getUVal('location', user?.location || ''),
+      about: getUVal('about', ''),
+      skills: getUJson('skills', []),
+      education: getUJson('education', []),
+      experience: getUJson('experience', []),
+      preferences: getUJson('preferences', null),
+      resumeFileName: getUVal('resume_name', user?.resumeFileName || ''),
+      resumeData: getUVal('resume_data', ''),
       coverNote: candidateCoverNote
     });
 

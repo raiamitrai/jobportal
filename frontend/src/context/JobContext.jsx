@@ -663,6 +663,28 @@ export function JobProvider({ children }) {
 
     const jobKey = (jobId || targetJob?.title || '').toString().toLowerCase().trim();
 
+    const candKey = candEmail.toLowerCase().trim();
+    const getScopedVal = (key, def = '') => {
+      try { return localStorage.getItem(`careonix_prof_${candKey}_${key}`) || def; } catch (e) { return def; }
+    };
+    const getScopedJson = (key, def = null) => {
+      try {
+        const v = localStorage.getItem(`careonix_prof_${candKey}_${key}`);
+        return v ? JSON.parse(v) : def;
+      } catch (e) { return def; }
+    };
+
+    const candPhone = applicationDetails.phone || candidateUser?.phone || getScopedVal('phone', '');
+    const candLocation = applicationDetails.location || candidateUser?.location || getScopedVal('location', '');
+    const candAbout = applicationDetails.about || getScopedVal('about', '');
+    const candSkills = (applicationDetails.skills && applicationDetails.skills.length > 0) ? applicationDetails.skills : getScopedJson('skills', []);
+    const candEducation = applicationDetails.education || getScopedJson('education', []);
+    const candExperience = applicationDetails.experience || getScopedJson('experience', []);
+    const candPreferences = applicationDetails.preferences || getScopedJson('preferences', null);
+    const candResumeName = applicationDetails.resumeFileName || candidateUser?.resumeFileName || getScopedVal('resume_name', '');
+    const candResumeData = applicationDetails.resumeData || getScopedVal('resume_data', '');
+    const candAvatar = applicationDetails.avatar || candidateUser?.avatar || candidateUser?.photoUrl || getScopedVal('avatar', '');
+
     // Check if application already exists for this candidate & job
     const existingApp = applications.find(a =>
       (a.candidateEmail || '').toLowerCase().trim() === candEmail &&
@@ -676,7 +698,16 @@ export function JobProvider({ children }) {
           return {
             ...a,
             applicationMethod: appMethod,
-            resumeFileName: applicationDetails.resumeFileName || a.resumeFileName,
+            candidatePhone: candPhone || a.candidatePhone,
+            candidateLocation: candLocation || a.candidateLocation,
+            candidateAbout: candAbout || a.candidateAbout,
+            candidateSkills: (candSkills && candSkills.length > 0) ? candSkills : (a.candidateSkills || []),
+            candidateEducation: candEducation || a.candidateEducation,
+            candidateExperience: candExperience || a.candidateExperience,
+            candidatePreferences: candPreferences || a.candidatePreferences,
+            candidateResumeData: candResumeData || a.candidateResumeData,
+            candidateAvatar: candAvatar || a.candidateAvatar,
+            resumeFileName: candResumeName || a.resumeFileName,
             coverNote: applicationDetails.coverNote || a.coverNote
           };
         }
@@ -703,8 +734,16 @@ export function JobProvider({ children }) {
       experience: targetJob?.experience || '1-3 Yrs',
       candidateName: candName,
       candidateEmail: candEmail,
-      candidatePhone: applicationDetails.phone || candidateUser?.phone || '',
-      resumeFileName: applicationDetails.resumeFileName || '',
+      candidatePhone: candPhone,
+      candidateLocation: candLocation,
+      candidateAbout: candAbout,
+      candidateSkills: candSkills,
+      candidateEducation: candEducation,
+      candidateExperience: candExperience,
+      candidatePreferences: candPreferences,
+      candidateResumeData: candResumeData,
+      candidateAvatar: candAvatar,
+      resumeFileName: candResumeName || 'resume.pdf',
       coverNote: applicationDetails.coverNote || '',
       applicationMethod: appMethod,
       postedBy: targetJob?.postedBy || '',
