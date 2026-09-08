@@ -56,8 +56,8 @@ export function extractTimestamp(input) {
       return num < 1e11 ? num * 1000 : num;
     }
 
-    // ID string with embedded epoch: notif_1725849600000_xyz or EML-1725849600000-...
-    const idMatch = trimmed.match(/(?:notif_|EML-|msg_|app_)?(\d{12,13})/i);
+    // ID string with embedded epoch: notif_1725849600000_xyz, msg-1725849600000-..., etc.
+    const idMatch = trimmed.match(/(?:notif_|EML-|msg_|app_|msg-|m-init-)?(\d{12,13})/i);
     if (idMatch) {
       const num = Number(idMatch[1]);
       if (!isNaN(num) && num > 1500000000000 && num < 2500000000000) {
@@ -159,4 +159,112 @@ export function useRelativeTimeTick(intervalMs = 30000) {
 
     return () => clearInterval(timer);
   }, [intervalMs]);
+}
+
+/**
+ * Calculates calendar day difference between target timestamp and now:
+ * 0 = Today
+ * 1 = Yesterday
+ * 2..6 = 2 to 6 days ago (same week)
+ * >= 7 = 1 week or older
+ */
+export function getCalendarDayDiff(targetTimestamp, now = Date.now()) {
+  const ts = extractTimestamp(targetTimestamp);
+  if (!ts) return 0;
+  const targetDate = new Date(ts);
+  const nowDate = new Date(now);
+
+  const targetMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+  const nowMidnight = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate()).getTime();
+
+  return Math.round((nowMidnight - targetMidnight) / (24 * 60 * 60 * 1000));
+}
+
+/**
+ * WhatsApp-style timestamp for conversation list / thread sidebar:
+ * - Today: "10:15 AM"
+ * - Yesterday: "Yesterday"
+ * - 2-6 days ago: "Sunday", "Monday", "Tuesday", etc.
+ * - >= 7 days: "DD/MM/YYYY" (e.g. 02/09/2026)
+ */
+export function formatWhatsAppChatListTime(timestamp, fallbackTime = '') {
+  const ts = extractTimestamp(timestamp);
+  if (!ts) return fallbackTime;
+
+  const diffDays = getCalendarDayDiff(ts);
+  const targetDate = new Date(ts);
+
+  if (diffDays <= 0) {
+    if (fallbackTime && fallbackTime.includes(':') && !fallbackTime.includes('-')) {
+      return fallbackTime;
+    }
+    return targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  if (diffDays === 1) {
+    return 'Yesterday';
+  }
+  if (diffDays >= 2 && diffDays <= 6) {
+    return targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+  }
+  const d = String(targetDate.getDate()).padStart(2, '0');
+  const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+  const y = targetDate.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * WhatsApp-style date separator badge (pill) between days in chat stream:
+ * - Today: "TODAY"
+ * - Yesterday: "YESTERDAY"
+ * - 2-6 days ago: "SUNDAY", "MONDAY", etc.
+ * - >= 7 days: "2 September 2026"
+ */
+export function formatWhatsAppDateSeparator(timestamp) {
+  const ts = extractTimestamp(timestamp);
+  if (!ts) return 'TODAY';
+
+  const diffDays = getCalendarDayDiff(ts);
+  const targetDate = new Date(ts);
+
+  if (diffDays <= 0) return 'TODAY';
+  if (diffDays === 1) return 'YESTERDAY';
+  if (diffDays >= 2 && diffDays <= 6) {
+    return targetDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  }
+  return targetDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/**
+ * WhatsApp-style message timestamp for individual message bubbles:
+ * - Today: "02:05 PM"
+ * - Yesterday: "Yesterday, 02:05 PM"
+ * - 2-6 days ago: "Sun, 02:05 PM"
+ * - >= 7 days: "02/09/2026, 02:05 PM"
+ */
+export function formatWhatsAppMessageTime(msg) {
+  const ts = extractTimestamp(msg?.timestamp) || extractTimestamp(msg?.id) || extractTimestamp(msg);
+  const rawTime = msg?.time;
+  const timeStr = rawTime && rawTime.includes(':') && !rawTime.includes('-')
+    ? rawTime
+    : (ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+
+  if (!ts) return timeStr || rawTime || '';
+
+  const diffDays = getCalendarDayDiff(ts);
+  const targetDate = new Date(ts);
+
+  if (diffDays <= 0) {
+    return timeStr;
+  }
+  if (diffDays === 1) {
+    return `Yesterday, ${timeStr}`;
+  }
+  if (diffDays >= 2 && diffDays <= 6) {
+    const day = targetDate.toLocaleDateString('en-US', { weekday: 'short' });
+    return `${day}, ${timeStr}`;
+  }
+  const d = String(targetDate.getDate()).padStart(2, '0');
+  const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+  const y = targetDate.getFullYear();
+  return `${d}/${m}/${y}, ${timeStr}`;
 }

@@ -14,9 +14,18 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import WhatsAppChatInput, { WhatsAppMessageBubble } from '../components/WhatsAppChatInput';
+import {
+  formatWhatsAppChatListTime,
+  formatWhatsAppDateSeparator,
+  formatWhatsAppMessageTime,
+  formatExactDateTime,
+  extractTimestamp,
+  useRelativeTimeTick
+} from '../utils/timeAgo';
 
 export default function CandidateMessagesPage() {
   const { user } = useAuth();
+  useRelativeTimeTick(30000);
   const {
     threads,
     sendMessage,
@@ -226,8 +235,11 @@ export default function CandidateMessagesPage() {
                           {isSystemAdmin ? 'CAREONIX Support' : t.companyName}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                            {lastMsg?.time || ''}
+                          <span
+                            title={formatExactDateTime(lastMsg?.timestamp || extractTimestamp(lastMsg?.id) || t.updatedAt)}
+                            style={{ fontSize: '0.7rem', color: '#94a3b8', whiteSpace: 'nowrap' }}
+                          >
+                            {formatWhatsAppChatListTime(lastMsg?.timestamp || extractTimestamp(lastMsg?.id) || t.updatedAt, lastMsg?.time)}
                           </span>
                           {unreadCount > 0 && (
                             <span style={{
@@ -319,48 +331,78 @@ export default function CandidateMessagesPage() {
             )}
 
             {/* Message History Area (Internal Scroll) */}
-            <div ref={chatContainerRef} style={{ flex: 1, padding: '1.25rem 1.5rem', overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div ref={chatContainerRef} style={{ flex: 1, padding: '1.25rem 1.5rem', overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {activeThread.messages?.map((msg, idx) => {
                 const isCandidateMsg = msg.sender === 'candidate';
                 const isSystemMsg = msg.sender === 'system';
+                const msgTs = msg.timestamp || extractTimestamp(msg.id) || Date.now();
 
-                if (isSystemMsg) {
-                  return (
-                    <div key={idx} style={{ textAlign: 'center', margin: '0.5rem 0' }}>
-                      <span style={{ background: '#f1f5f9', color: '#64748b', padding: '4px 12px', borderRadius: '50px', fontSize: '0.74rem', fontWeight: '600' }}>
-                        {msg.text}
-                      </span>
-                    </div>
-                  );
-                }
+                // Group by calendar day for WhatsApp date separator banner
+                const curDateKey = new Date(msgTs).toDateString();
+                const prevMsg = idx > 0 ? activeThread.messages[idx - 1] : null;
+                const prevMsgTs = prevMsg ? (prevMsg.timestamp || extractTimestamp(prevMsg.id) || Date.now()) : null;
+                const prevDateKey = prevMsgTs ? new Date(prevMsgTs).toDateString() : null;
+                const isNewDay = idx === 0 || curDateKey !== prevDateKey;
 
                 return (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isCandidateMsg ? 'flex-end' : 'flex-start',
-                      maxWidth: '75%',
-                      alignSelf: isCandidateMsg ? 'flex-end' : 'flex-start'
-                    }}
-                  >
-                    <div style={{
-                      background: isCandidateMsg ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' : '#ffffff',
-                      color: isCandidateMsg ? '#ffffff' : '#0f172a',
-                      padding: '0.85rem 1.15rem',
-                      borderRadius: isCandidateMsg ? '18px 18px 2px 18px' : '18px 18px 18px 2px',
-                      boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
-                      fontSize: '0.9rem',
-                      lineHeight: '1.45',
-                      border: isCandidateMsg ? 'none' : '1px solid #e2e8f0'
-                    }}>
-                      <WhatsAppMessageBubble msg={msg} isOwn={isCandidateMsg} />
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px', fontWeight: '500' }}>
-                      {msg.time}
-                    </span>
-                  </div>
+                  <React.Fragment key={msg.id || idx}>
+                    {/* WhatsApp Date Separator Banner (TODAY, YESTERDAY, Day of Week, Date) */}
+                    {isNewDay && (
+                      <div style={{ display: 'flex', justifyContent: 'center', margin: '0.65rem 0' }}>
+                        <span style={{
+                          background: '#ffffff',
+                          color: '#64748b',
+                          padding: '4px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          letterSpacing: '0.04em',
+                          border: '1px solid #e2e8f0',
+                          boxShadow: '0 1px 3px rgba(15,23,42,0.05)',
+                          textTransform: 'uppercase'
+                        }}>
+                          {formatWhatsAppDateSeparator(msgTs)}
+                        </span>
+                      </div>
+                    )}
+
+                    {isSystemMsg ? (
+                      <div style={{ textAlign: 'center', margin: '0.5rem 0' }}>
+                        <span style={{ background: '#f1f5f9', color: '#64748b', padding: '4px 12px', borderRadius: '50px', fontSize: '0.74rem', fontWeight: '600' }}>
+                          {msg.text}
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: isCandidateMsg ? 'flex-end' : 'flex-start',
+                          maxWidth: '75%',
+                          alignSelf: isCandidateMsg ? 'flex-end' : 'flex-start'
+                        }}
+                      >
+                        <div style={{
+                          background: isCandidateMsg ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' : '#ffffff',
+                          color: isCandidateMsg ? '#ffffff' : '#0f172a',
+                          padding: '0.85rem 1.15rem',
+                          borderRadius: isCandidateMsg ? '18px 18px 2px 18px' : '18px 18px 18px 2px',
+                          boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                          fontSize: '0.9rem',
+                          lineHeight: '1.45',
+                          border: isCandidateMsg ? 'none' : '1px solid #e2e8f0'
+                        }}>
+                          <WhatsAppMessageBubble msg={msg} isOwn={isCandidateMsg} />
+                        </div>
+                        <span
+                          title={formatExactDateTime(msgTs)}
+                          style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px', fontWeight: '500' }}
+                        >
+                          {formatWhatsAppMessageTime(msg)}
+                        </span>
+                      </div>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </div>
