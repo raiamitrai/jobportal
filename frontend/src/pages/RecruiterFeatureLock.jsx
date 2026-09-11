@@ -23,7 +23,7 @@ export default function RecruiterFeatureLock({ featureName = 'This Feature', set
 
     if (!razorpayConfigured) {
       setPaymentError(
-        `Razorpay key not configured yet. Please add your key in src/utils/razorpayUtils.js (current: "${RAZORPAY_KEY_ID}"). ` +
+        'Razorpay key not configured yet. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file. ' +
         'Get your test key free at razorpay.com → Settings → API Keys.'
       );
       return;
@@ -215,7 +215,7 @@ export default function RecruiterFeatureLock({ featureName = 'This Feature', set
                 }}>
                   ⚠️ <strong>Setup Required:</strong> Add your Razorpay Test Key in{' '}
                   <code style={{ background: '#fef3c7', padding: '1px 4px', borderRadius: '4px', fontSize: '0.78rem' }}>
-                    src/utils/razorpayUtils.js
+                    .env (RAZORPAY_KEY_ID)
                   </code>.{' '}
                   Get a free test key at{' '}
                   <a href="https://razorpay.com" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: '700' }}>

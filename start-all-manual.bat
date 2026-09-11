@@ -6,6 +6,14 @@ echo =========================================================================
 echo  Launching all microservices, DB containers, and React frontend...
 echo.
 
+REM Load environment variables from .env if present
+if exist "d:\job portal\.env" (
+    echo Loading environment variables from .env...
+    for /f "usebackq tokens=1,* delims==" %%A in ("d:\job portal\.env") do (
+        if not "%%A"=="" if not "%%A:~0,1%"=="#" set "%%A=%%B"
+    )
+)
+
 set MVN_CMD="d:\job portal\backend\maven\apache-maven-3.9.6\bin\mvn.cmd"
 
 echo [1/9] Starting Frontend (React Vite - Port 3000)...

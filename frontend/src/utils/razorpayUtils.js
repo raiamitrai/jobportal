@@ -22,7 +22,32 @@
  *   Card: 4111 1111 1111 1111  |  Expiry: 12/26  |  CVV: 123  |  OTP: 1234
  */
 
-// Backend payment service URL (subscription-service on port 8087)
+// Base URL resolver: checks relative /payments (Vite dev/proxy), direct subscription-service (8087), or API Gateway (8080)
+let cachedBaseUrl = null;
+
+export async function getPaymentServiceUrl() {
+  if (cachedBaseUrl) return cachedBaseUrl;
+
+  const candidates = [
+    '',                       // Relative /payments (Vite dev server / production proxy)
+    'http://localhost:8087',  // Direct subscription-service
+    'http://localhost:8080'   // API Gateway
+  ];
+
+  for (const base of candidates) {
+    try {
+      const checkUrl = base ? `${base}/payments/health` : '/payments/health';
+      const res = await fetch(checkUrl, { signal: AbortSignal.timeout(1200) });
+      if (res.ok) {
+        cachedBaseUrl = base;
+        return base;
+      }
+    } catch (_) {}
+  }
+
+  return 'http://localhost:8087';
+}
+
 const PAYMENT_SERVICE_URL = 'http://localhost:8087';
 
 /**
@@ -44,7 +69,7 @@ function isRazorpayLoaded() {
  */
 export async function initiateRazorpayPayment({ plan, user, onSuccess, onFailure, onDismiss }) {
   if (!isRazorpayLoaded()) {
-    const err = 'Razorpay SDK not loaded. Please refresh the page and try again.';
+    const err = 'Razorpay SDK not loaded. Please check your internet connection and refresh the page.';
     if (onFailure) onFailure(err);
     throw new Error(err);
   }
@@ -56,10 +81,13 @@ export async function initiateRazorpayPayment({ plan, user, onSuccess, onFailure
     throw new Error(err);
   }
 
+  // Resolve backend payment URL (Vite dev server, Direct 8087, or Gateway 8080)
+  const baseUrl = await getPaymentServiceUrl();
+
   // ── STEP 1: Create Razorpay Order on backend ──────────────────────────────
   let orderData;
   try {
-    const res = await fetch(`${PAYMENT_SERVICE_URL}/payments/create-order`, {
+    const res = await fetch(`${baseUrl}/payments/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,19 +109,27 @@ export async function initiateRazorpayPayment({ plan, user, onSuccess, onFailure
 
     orderData = await res.json();
   } catch (fetchErr) {
-    // Network error — backend not running
-    if (fetchErr.message?.includes('fetch')) {
-      const msg = 'Payment service is not reachable (http://localhost:8087). Please start the subscription-service backend.';
-      if (onFailure) onFailure(msg);
-      throw new Error(msg);
+    // Check if keys not configured
+    if (fetchErr.message && !fetchErr.message.includes('fetch')) {
+      throw fetchErr;
     }
-    throw fetchErr;
+    const msg = 'Payment service is not reachable. Please start your backend services (start-all-manual.bat) or run frontend in dev mode.';
+    if (onFailure) onFailure(msg);
+    throw new Error(msg);
+  }
+
+  // Validate Razorpay Key ID
+  const effectiveKey = orderData.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID || '';
+  if (!effectiveKey || effectiveKey === 'rzp_test_YourKeyHere' || effectiveKey.includes('YourKey')) {
+    const keyMsg = 'Razorpay Key ID not configured. Please open .env in your project and add your real RAZORPAY_KEY_ID & RAZORPAY_KEY_SECRET from dashboard.razorpay.com.';
+    if (onFailure) onFailure(keyMsg);
+    throw new Error(keyMsg);
   }
 
   // ── STEP 2: Open Razorpay Checkout with order_id ──────────────────────────
   return new Promise((resolve, reject) => {
     const razorpayOptions = {
-      key: orderData.keyId,
+      key: effectiveKey,
       amount: orderData.amount,          // in paise
       currency: orderData.currency || 'INR',
       name: 'CAREONIX',
@@ -133,7 +169,7 @@ export async function initiateRazorpayPayment({ plan, user, onSuccess, onFailure
          */
         try {
           // ── STEP 3: Verify payment on backend ───────────────────────────────
-          const verifyRes = await fetch(`${PAYMENT_SERVICE_URL}/payments/verify`, {
+          const verifyRes = await fetch(`${baseUrl}/payments/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -245,7 +281,8 @@ function cacheSubscriptionLocally(email, subscriptionStatus, razorpayResponse) {
 export async function fetchSubscriptionStatus(email) {
   if (!email) return null;
   try {
-    const res = await fetch(`${PAYMENT_SERVICE_URL}/payments/subscription?email=${encodeURIComponent(email)}`);
+    const baseUrl = await getPaymentServiceUrl();
+    const res = await fetch(`${baseUrl}/payments/subscription?email=${encodeURIComponent(email)}`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -254,11 +291,12 @@ export async function fetchSubscriptionStatus(email) {
 }
 
 /**
- * Checks if the payment backend (subscription-service:8087) is reachable.
+ * Checks if the payment backend (subscription-service:8087 or dev proxy) is reachable.
  */
 export async function isPaymentServiceReachable() {
   try {
-    const res = await fetch(`${PAYMENT_SERVICE_URL}/payments/health`, { signal: AbortSignal.timeout(3000) });
+    const baseUrl = await getPaymentServiceUrl();
+    const res = await fetch(`${baseUrl}/payments/health`, { signal: AbortSignal.timeout(3000) });
     return res.ok;
   } catch {
     return false;
@@ -269,7 +307,5 @@ export { PAYMENT_SERVICE_URL };
 
 // Legacy export for existing code compatibility
 export function isRazorpayConfigured() {
-  // With backend integration, we consider it "configured" always
-  // (the actual key check happens server-side)
   return true;
 }

@@ -191,6 +191,8 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_YourKeyHere}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-YourSecretHere}
     depends_on:
       - rabbitmq
       - eureka-server

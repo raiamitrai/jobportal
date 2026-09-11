@@ -37,7 +37,7 @@ spring:
         - id: subscription-service
           uri: lb://SUBSCRIPTION-SERVICE
           predicates:
-            - Path=/subscriptions/**, /api/subscriptions/**
+            - Path=/subscriptions/**, /api/subscriptions/**, /payments/**, /api/payments/**
 
         - id: application-service
           uri: lb://APPLICATION-SERVICE

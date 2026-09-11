@@ -84,7 +84,7 @@ export default function Subscriptions({ role }) {
     setPaymentError('');
 
     if (!isRazorpayConfigured()) {
-      setPaymentError('Razorpay key not configured. Add your key in src/utils/razorpayUtils.js');
+      setPaymentError('Razorpay key not configured. Please add RAZORPAY_KEY_ID & RAZORPAY_KEY_SECRET in your .env file.');
       return;
     }
 
