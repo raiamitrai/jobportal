@@ -41,7 +41,6 @@ jobs:
           mvn -B clean package -Dmaven.test.skip=true -f ./backend/subscription-service/pom.xml
           mvn -B clean package -Dmaven.test.skip=true -f ./backend/analytics-service/pom.xml
           mvn -B clean package -Dmaven.test.skip=true -f ./backend/interview-service/pom.xml
-          mvn -B clean package -Dmaven.test.skip=true -f ./backend/website-controller/pom.xml
 
   # ─────────────────────────────────────────────────────────────
   # Job 2: Build & Verify React Frontend
