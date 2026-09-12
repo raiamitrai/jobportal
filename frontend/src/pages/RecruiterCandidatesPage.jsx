@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ENDPOINTS from '../config/api';
 import {
   Search,
   Filter,
@@ -361,9 +362,9 @@ export default function RecruiterCandidatesPage({ setActiveTab }) {
 
   const [dbCandidates, setDbCandidates] = useState([]);
 
-  // Fetch live candidates from MySQL DB profile service
+  // Fetch live candidates via API Gateway
   useEffect(() => {
-    fetch('http://localhost:8082/profiles?size=1000')
+    fetch(ENDPOINTS.profiles('?size=1000'))
       .then(res => res.json())
       .then(data => {
         const list = Array.isArray(data) ? data : (data.content || []);

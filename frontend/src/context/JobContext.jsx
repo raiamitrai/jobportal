@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getSettings } from '../utils/settingsManager';
 import { isJobExpired, getDefaultDeadlineDate } from '../utils/timeAgo';
+import ENDPOINTS from '../config/api';
 
 export const INITIAL_JOBS = [];
 
@@ -210,9 +211,9 @@ export function JobProvider({ children }) {
           }
         } catch (e) {}
 
-        // 2. Fetch from Java Spring Boot Job Service (port 8081)
+        // 2. Fetch from Java Spring Boot Job Service (via API Gateway)
         try {
-          const res = await fetch('http://localhost:8081/jobs', {
+          const res = await fetch(ENDPOINTS.jobs(), {
             headers: { 'Accept': 'application/json' },
             signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
           }).catch(() => null);
@@ -648,12 +649,7 @@ export function JobProvider({ children }) {
 
     // Call backend API if running to ensure DB sync across microservices
     try {
-      fetch(`/jobs/${jobId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: statusUpper })
-      }).catch(() => {});
-      fetch(`http://localhost:8081/jobs/${jobId}`, {
+      fetch(ENDPOINTS.jobs(`/${jobId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: statusUpper })
@@ -690,8 +686,7 @@ export function JobProvider({ children }) {
 
     // Call backend API if running to ensure DB deletion
     try {
-      fetch(`/jobs/${jobId}`, { method: 'DELETE' }).catch(() => {});
-      fetch(`http://localhost:8081/jobs/${jobId}`, { method: 'DELETE' }).catch(() => {});
+      fetch(ENDPOINTS.jobs(`/${jobId}`), { method: 'DELETE' }).catch(() => {});
     } catch (e) {}
   };
 

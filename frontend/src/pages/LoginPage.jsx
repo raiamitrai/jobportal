@@ -10,6 +10,7 @@ import { getSettings } from '../utils/settingsManager';
 import { isTwoFactorEnabled, recordLoginEvent, getTwoFactorPin } from '../utils/loginActivityUtils';
 import careonixLogo from '../assets/careonix-logo-transparent.png';
 import loginIllustration from '../assets/login-3d-transparent.png';
+import ENDPOINTS from '../config/api';
 
 const GOOGLE_CLIENT_ID = '2829663012-gi9u6ejtn5n4ftb26l3ain40qsucv6t1.apps.googleusercontent.com';
 
@@ -244,7 +245,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
     setErr('');
     setNotice(`Sending 6-digit OTP to ${recipient}...`);
     try {
-      const res = await fetch('http://localhost:8086/notifications/otp', {
+      const res = await fetch(ENDPOINTS.notifications('/otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipient, type: 'EMAIL' }),
@@ -490,7 +491,7 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
 
     if (!existingUser && !deletedList.includes(emailLower)) {
       try {
-        const res = await fetch(`http://localhost:8082/profiles/email?email=${encodeURIComponent(emailLower)}`);
+        const res = await fetch(ENDPOINTS.profiles(`/email?email=${encodeURIComponent(emailLower)}`));
         if (res.ok) {
           const matched = await res.json();
           if (matched && !deletedList.includes(emailLower)) {
@@ -614,9 +615,9 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       }
     } catch {}
 
-    // 7. Check backend MySQL profile-service directly (port 8082)
+    // 7. Check backend profile-service via Gateway
     try {
-      const res = await fetch(`http://localhost:8082/profiles/email?email=${encodeURIComponent(clean)}`, {
+      const res = await fetch(ENDPOINTS.profiles(`/email?email=${encodeURIComponent(clean)}`), {
         signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
       }).catch(() => null);
 

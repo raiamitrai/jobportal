@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { recordLoginEvent } from '../utils/loginActivityUtils';
+import ENDPOINTS from '../config/api';
 
 const AuthContext = createContext(null);
 
@@ -13,10 +14,10 @@ const sendAdminEmail = (recipientEmail, subject, htmlBody, type = 'ADMIN_ACTION'
     const logItem = {
       id: `EML-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       recipientEmail: cleanEmail,
-      title: subject,
-      message: htmlBody,
+      subject,
+      body: htmlBody,
       type,
-      status: 'SENT_SUCCESSFULLY',
+      status: 'SENT',
       sentAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
       timestamp: Date.now()
     };
@@ -24,9 +25,9 @@ const sendAdminEmail = (recipientEmail, subject, htmlBody, type = 'ADMIN_ACTION'
     localStorage.setItem('careonix_sent_emails', JSON.stringify([logItem, ...existing]));
   } catch (e) {}
 
-  // 2. Fire to Java Notification Service (port 8086) — no-op if not running
+  // 2. Fire to Java Notification Service via API Gateway — no-op if not running
   try {
-    fetch('http://localhost:8086/notifications', {
+    fetch(ENDPOINTS.notifications(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -125,7 +126,7 @@ export function AuthProvider({ children }) {
   // Sync user profiles directly from WampServer MySQL database (Master Source of Truth across devices)
   const syncProfilesFromBackend = async () => {
     try {
-      const res = await fetch('http://localhost:8082/profiles?size=1000', {
+      const res = await fetch(ENDPOINTS.profiles('?size=1000'), {
         signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined
       }).catch(() => null);
       if (!res || !res.ok) return;
@@ -387,13 +388,13 @@ export function AuthProvider({ children }) {
     const updated = [...currentList, newUser];
     saveRegisteredUsers(updated);
 
-    // Async sync to MySQL via profile-service (port 8082 direct)
+    // Async sync via profile-service (through API Gateway)
     try {
-      fetch('http://localhost:8082/profiles/register', {
+      fetch(ENDPOINTS.profiles('/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
-      }).catch(err => console.log('MySQL sync note:', err.message));
+      }).catch(err => console.log('Backend profile sync note:', err.message));
     } catch (e) {}
 
     return newUser;
@@ -608,9 +609,9 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      fetch(`http://localhost:8082/profiles/status?email=${encodeURIComponent(cleanEmail)}&status=APPROVED`, {
+      fetch(ENDPOINTS.profiles(`/status?email=${encodeURIComponent(cleanEmail)}&status=APPROVED`), {
         method: 'PUT'
-      }).catch(err => console.log('MySQL Profile status update notice:', err.message));
+      }).catch(err => console.log('Backend Profile status update notice:', err.message));
     } catch (e) {}
 
     // Dispatch in-app notification (Recruiter: Approved)
@@ -694,9 +695,9 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      fetch(`http://localhost:8082/profiles/status?email=${encodeURIComponent(cleanEmail)}&status=PENDING_APPROVAL`, {
+      fetch(ENDPOINTS.profiles(`/status?email=${encodeURIComponent(cleanEmail)}&status=PENDING_APPROVAL`), {
         method: 'PUT'
-      }).catch(err => console.log('MySQL Profile status update notice:', err.message));
+      }).catch(err => console.log('Backend Profile status update notice:', err.message));
     } catch (e) {}
 
     // Dispatch in-app notification (Recruiter: Under Review)
@@ -777,9 +778,9 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      fetch(`http://localhost:8082/profiles/status?email=${encodeURIComponent(cleanEmail)}&status=REJECTED`, {
+      fetch(ENDPOINTS.profiles(`/status?email=${encodeURIComponent(cleanEmail)}&status=REJECTED`), {
         method: 'PUT'
-      }).catch(err => console.log('MySQL Profile status update notice:', err.message));
+      }).catch(err => console.log('Backend Profile status update notice:', err.message));
     } catch (e) {}
 
     // Dispatch in-app notification (Recruiter: Rejected)
@@ -924,17 +925,17 @@ export function AuthProvider({ children }) {
       }
     } catch (e) {}
 
-    // 8. Backend MySQL database profile & job removal
+    // 8. Backend profile & job removal via Gateway
     try {
-      fetch(`http://localhost:8082/profiles?email=${encodeURIComponent(cleanEmail)}`, { method: 'DELETE' })
+      fetch(ENDPOINTS.profiles(`?email=${encodeURIComponent(cleanEmail)}`), { method: 'DELETE' })
         .then(() => {
           syncProfilesFromBackend();
         })
-        .catch(err => console.log('MySQL Profile delete notice:', err.message));
+        .catch(err => console.log('Backend Profile delete notice:', err.message));
     } catch (e) {}
 
     try {
-      fetch(`http://localhost:8081/jobs/by-recruiter?email=${encodeURIComponent(cleanEmail)}`, { method: 'DELETE' })
+      fetch(ENDPOINTS.jobs(`/by-recruiter?email=${encodeURIComponent(cleanEmail)}`), { method: 'DELETE' })
         .catch(err => console.log('Job service delete notice:', err.message));
     } catch (e) {}
 

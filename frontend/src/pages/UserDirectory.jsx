@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ENDPOINTS from '../config/api';
 import {
   Users,
   User,
@@ -67,7 +68,7 @@ export default function UserDirectory() {
   };
 
   useEffect(() => {
-    fetch('http://localhost:8082/profiles?size=1000')
+    fetch(ENDPOINTS.profiles('?size=1000'))
       .then(res => res.json())
       .then(data => {
         const list = Array.isArray(data) ? data : (data.content || []);

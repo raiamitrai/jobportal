@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSettings } from '../utils/settingsManager';
 import { formatRelativeTime, formatExactDateTime, extractTimestamp } from '../utils/timeAgo';
+import ENDPOINTS from '../config/api';
 
 const NotificationContext = createContext(null);
 
@@ -73,9 +74,9 @@ export function NotificationProvider({ children }) {
       localStorage.setItem('careonix_sent_emails', JSON.stringify([emailLogItem, ...existingLogs]));
     } catch (e) {}
 
-    // Dispatch via backend REST endpoint Port 8086
+    // Dispatch via backend REST endpoint via API Gateway
     try {
-      fetch('http://localhost:8086/notifications', {
+      fetch(ENDPOINTS.notifications(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

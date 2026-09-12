@@ -22,17 +22,20 @@
  *   Card: 4111 1111 1111 1111  |  Expiry: 12/26  |  CVV: 123  |  OTP: 1234
  */
 
-// Base URL resolver: checks relative /payments (Vite dev/proxy), direct subscription-service (8087), or API Gateway (8080)
+// Base URL resolver: checks configured Gateway, relative /payments, API Gateway (8080), or direct (8087)
 let cachedBaseUrl = null;
 
 export async function getPaymentServiceUrl() {
   if (cachedBaseUrl) return cachedBaseUrl;
 
+  const envGateway = (import.meta.env.VITE_API_GATEWAY_URL || '').replace(/\/+$/, '');
+
   const candidates = [
-    '',                       // Relative /payments (Vite dev server / production proxy)
-    'http://localhost:8087',  // Direct subscription-service
-    'http://localhost:8080'   // API Gateway
-  ];
+    envGateway,
+    '',                       // Relative /payments (production reverse proxy or Vite proxy)
+    'http://localhost:8080',  // API Gateway
+    'http://localhost:8087'   // Direct subscription-service
+  ].filter(c => typeof c === 'string');
 
   for (const base of candidates) {
     try {
@@ -45,10 +48,12 @@ export async function getPaymentServiceUrl() {
     } catch (_) {}
   }
 
-  return 'http://localhost:8087';
+  const fallback = envGateway || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '' : 'http://localhost:8080');
+  cachedBaseUrl = fallback;
+  return fallback;
 }
 
-const PAYMENT_SERVICE_URL = 'http://localhost:8087';
+const PAYMENT_SERVICE_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080';
 
 /**
  * Returns whether Razorpay SDK is loaded in browser.
