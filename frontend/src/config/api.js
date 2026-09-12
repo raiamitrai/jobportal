@@ -42,6 +42,25 @@ export const ENDPOINTS = {
   payments: (path = '') => getServiceUrl('payments', path),
   interviews: (path = '') => getServiceUrl('interviews', path),
   analytics: (path = '') => getServiceUrl('analytics', path),
+  adminHealth: (path = '') => {
+    const clean = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+    const base = API_BASE_URL;
+    if (base) return `${base}/admin/health${clean}`;
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return `/admin/health${clean}`;
+    }
+    return `http://localhost:8080/admin/health${clean}`;
+  },
+  actuator: (path = '') => {
+    const clean = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+    const base = API_BASE_URL;
+    if (base) return `${base}/actuator${clean}`;
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return `/actuator${clean}`;
+    }
+    return `http://localhost:8080/actuator${clean}`;
+  }
 };
+
 
 export default ENDPOINTS;

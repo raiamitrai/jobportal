@@ -4,30 +4,32 @@ import {
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Download, Clock,
   Wifi, Shield, Globe, Layers, ChevronDown, ChevronUp, ArrowRight, X
 } from 'lucide-react';
+import ENDPOINTS from '../config/api';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Service registry — used for UI display, icons, categories
 // Actual health data comes from /admin/health/all (Gateway aggregation endpoint)
 // ──────────────────────────────────────────────────────────────────────────────
 const SERVICES_META = {
-  'api-gateway':           { name: 'API Gateway',          icon: Globe,    category: 'Core & Gateway',   port: 8080, directUrl: 'http://localhost:8080/actuator/health' },
-  'eureka-server':         { name: 'Eureka Service Discovery', icon: Layers, category: 'Core & Gateway', port: 8761, directUrl: 'http://localhost:8761' },
-  'auth-service':          { name: 'Auth & JWT Security',  icon: Shield,   category: 'Security & Auth',  port: 8085, directUrl: 'http://localhost:8085/v3/api-docs' },
-  'job-service':           { name: 'Job Service',          icon: Server,   category: 'Business',         port: 8081, directUrl: 'http://localhost:8081/jobs' },
-  'profile-service':       { name: 'Profile Service',      icon: Shield,   category: 'Business',         port: 8082, directUrl: 'http://localhost:8082/profiles?size=1' },
-  'application-service':   { name: 'Application Service',  icon: Database, category: 'Business',         port: 8083, directUrl: 'http://localhost:8083/applications' },
-  'subscription-service':  { name: 'Subscription Service', icon: Server,   category: 'Business',         port: 8087, directUrl: 'http://localhost:8087/subscriptions' },
-  'notification-service':  { name: 'Notification Service', icon: Bell,     category: 'Business',         port: 8086, directUrl: 'http://localhost:8086/notifications/otp' },
-  'interview-service':     { name: 'Interview Service',    icon: Activity, category: 'Business',         port: 8089, directUrl: 'http://localhost:8089/interviews' },
-  'analytics-service':     { name: 'Analytics Service',    icon: Activity, category: 'Analytics',        port: 8088, directUrl: 'http://localhost:8088/analytics' },
-  'mailhog':               { name: 'MailHog SMTP Server',  icon: Mail,     category: 'Infrastructure',   port: 8025, directUrl: 'http://localhost:8025/api/v2/messages' },
-  'rabbitmq':              { name: 'RabbitMQ Message Broker', icon: Activity, category: 'Infrastructure', port: 15672, directUrl: 'http://localhost:15672' },
-  'mysql-wamp':            { name: 'WampServer MySQL DB',  icon: Database, category: 'Database',         port: 3306, directUrl: 'http://localhost:8082/profiles?size=1' },
-  'postgresql':            { name: 'PostgreSQL Database',  icon: Database, category: 'Database',         port: 5432, directUrl: 'http://localhost:8081/jobs?size=1' },
+  'api-gateway':           { name: 'API Gateway',          icon: Globe,    category: 'Core & Gateway',   port: 8080, directUrl: ENDPOINTS.actuator('/health') },
+  'eureka-server':         { name: 'Eureka Service Discovery', icon: Layers, category: 'Core & Gateway', port: 8761, directUrl: '/eureka' },
+  'auth-service':          { name: 'Auth & JWT Security',  icon: Shield,   category: 'Security & Auth',  port: 8085, directUrl: ENDPOINTS.auth('/v3/api-docs') },
+  'job-service':           { name: 'Job Service',          icon: Server,   category: 'Business',         port: 8081, directUrl: ENDPOINTS.jobs() },
+  'profile-service':       { name: 'Profile Service',      icon: Shield,   category: 'Business',         port: 8082, directUrl: ENDPOINTS.profiles('?size=1') },
+  'application-service':   { name: 'Application Service',  icon: Database, category: 'Business',         port: 8083, directUrl: ENDPOINTS.applications() },
+  'subscription-service':  { name: 'Subscription Service', icon: Server,   category: 'Business',         port: 8087, directUrl: ENDPOINTS.subscriptions() },
+  'notification-service':  { name: 'Notification Service', icon: Bell,     category: 'Business',         port: 8086, directUrl: ENDPOINTS.notifications('/otp') },
+  'interview-service':     { name: 'Interview Service',    icon: Activity, category: 'Business',         port: 8089, directUrl: ENDPOINTS.interviews() },
+  'analytics-service':     { name: 'Analytics Service',    icon: Activity, category: 'Analytics',        port: 8088, directUrl: ENDPOINTS.analytics() },
+  'mailhog':               { name: 'MailHog SMTP Server',  icon: Mail,     category: 'Infrastructure',   port: 8025, directUrl: '/mailhog' },
+  'rabbitmq':              { name: 'RabbitMQ Message Broker', icon: Activity, category: 'Infrastructure', port: 15672, directUrl: '/rabbitmq' },
+  'mysql-wamp':            { name: 'WampServer MySQL DB',  icon: Database, category: 'Database',         port: 3306, directUrl: ENDPOINTS.profiles('?size=1') },
+  'postgresql':            { name: 'PostgreSQL Database',  icon: Database, category: 'Database',         port: 5432, directUrl: ENDPOINTS.jobs('?size=1') },
 };
 
 // Gateway aggregation endpoint
-const HEALTH_ALL_URL = 'http://localhost:8080/admin/health/all';
+const HEALTH_ALL_URL = ENDPOINTS.adminHealth('/all');
+
 
 const STATUS_CONFIG = {
   healthy:      { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: CheckCircle2,  label: 'Healthy'     },
@@ -242,8 +244,9 @@ export default function AdminSystemHealthPage() {
   // ── Fetch system resource usage ───────────────────────────────────────────
   const fetchResourceData = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:8080/actuator/metrics/system.cpu.usage', { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(ENDPOINTS.actuator('/metrics/system.cpu.usage'), { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
+
         const data = await res.json();
         const cpuPct = Math.round((data?.measurements?.[0]?.value ?? 0) * 100);
         setResourceData(prev => ({ ...prev, cpu: cpuPct || 14 }));

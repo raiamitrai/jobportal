@@ -3,8 +3,10 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getSettings } from '../utils/settingsManager';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import ENDPOINTS from '../config/api';
 
 // Module-level flag — survives StrictMode remount unlike useRef
+
 // Cleared on page unload so fresh attempts always work
 const EXCHANGE_KEY = '__careonix_oauth_code_exchanged__';
 
@@ -148,11 +150,11 @@ export default function OAuthCallbackPage() {
       // ── Step 2: Backend Auth Service / Gateway fallback ───────────────────
       if (!accessToken && !githubError) {
         const authCandidates = [
+          ENDPOINTS.auth('/oauth/github'),
           '/auth/oauth/github',
-          '/api/auth/oauth/github',
-          'http://localhost:8080/auth/oauth/github',
-          'http://localhost:8085/auth/oauth/github'
+          '/api/auth/oauth/github'
         ];
+
         for (const authUrl of authCandidates) {
           try {
             const res = await fetchWithTimeout(authUrl, {
