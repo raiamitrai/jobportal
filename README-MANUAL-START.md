@@ -135,5 +135,5 @@ docker compose up --build -d
 | **Subscription Service** | `8087` | REST API | `backend/subscription-service/` |
 | **MySQL Database** | `3306` | Database | Docker Container |
 | **PostgreSQL Database** | `5432` | Database | Docker Container |
-| **phpMyAdmin GUI** | `8085` | DB Manager | Docker Container |
+| **phpMyAdmin GUI** | `8090` | DB Manager | Docker Container |
 | **RabbitMQ Console** | `15672` | Message Broker | Docker Container |
