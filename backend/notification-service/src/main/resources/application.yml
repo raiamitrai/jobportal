@@ -1,9 +1,9 @@
 spring:
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: careonixteam@gmail.com
-    password: pvdukyixkhaughoo
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:careonixteam@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -13,10 +13,11 @@ spring:
             required: true
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
-    port: 5672
-    username: guest
-    password: guest
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
 notification:
-  exchange: notification.exchange
-  queue: notification.queue
-  routing-key: notification.key
+  exchange: ${NOTIFICATION_EXCHANGE:notification.exchange}
+  queue: ${NOTIFICATION_QUEUE:notification.queue}
+  routing-key: ${NOTIFICATION_ROUTING_KEY:notification.key}
+

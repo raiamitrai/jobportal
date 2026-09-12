@@ -28,12 +28,15 @@ public class AdminHealthController {
     private static final List<Map<String, String>> SERVICES = List.of(
         Map.of("id", "api-gateway",          "name", "API Gateway",              "url", "http://localhost:8080/actuator/health",              "port", "8080",  "category", "Core"),
         Map.of("id", "eureka-server",         "name", "Eureka Discovery",         "url", "http://eureka-server:8761/actuator/health",           "port", "8761",  "category", "Core"),
+        Map.of("id", "auth-service",          "name", "Auth & Security Service",  "url", "http://auth-service:8085/v3/api-docs",                "port", "8085",  "category", "Security"),
         Map.of("id", "job-service",           "name", "Job Service",              "url", "http://job-service:8081/actuator/health",             "port", "8081",  "category", "Business"),
         Map.of("id", "profile-service",       "name", "Profile Service",          "url", "http://profile-service:8082/actuator/health",         "port", "8082",  "category", "Business"),
         Map.of("id", "application-service",   "name", "Application Service",      "url", "http://application-service:8083/actuator/health",     "port", "8083",  "category", "Business"),
         Map.of("id", "notification-service",  "name", "Notification Service",     "url", "http://notification-service:8086/actuator/health",    "port", "8086",  "category", "Business"),
+        Map.of("id", "subscription-service",  "name", "Subscription Service",     "url", "http://subscription-service:8087/v3/api-docs",         "port", "8087",  "category", "Business"),
         Map.of("id", "interview-service",     "name", "Interview Service",        "url", "http://interview-service:8089/actuator/health",       "port", "8089",  "category", "Business"),
-        Map.of("id", "rabbitmq",              "name", "RabbitMQ Message Broker",  "url", "http://guest:guest@rabbitmq:15672/api/healthchecks/node", "port", "15672", "category", "Infrastructure"),
+        Map.of("id", "analytics-service",     "name", "Analytics Service",        "url", "http://analytics-service:8088/actuator/health",       "port", "8088",  "category", "Analytics"),
+        Map.of("id", "rabbitmq",              "name", "RabbitMQ Message Broker",  "url", System.getenv("RABBITMQ_HEALTH_URL") != null ? System.getenv("RABBITMQ_HEALTH_URL") : "http://guest:guest@rabbitmq:15672/api/healthchecks/node", "port", "15672", "category", "Infrastructure"),
         Map.of("id", "mailhog",               "name", "Email Service (MailHog)",  "url", "http://mailhog:8025/api/v2/messages?limit=1",         "port", "8025",  "category", "Infrastructure")
     );
 

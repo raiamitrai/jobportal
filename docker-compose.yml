@@ -5,16 +5,17 @@ services:
       context: ./backend/eureka-server
       dockerfile: Dockerfile
     ports:
-      - "8761:8761"
+      - "127.0.0.1:8761:8761"
     networks:
       - app-network
 
-  # React Web Frontend
+  # React Web Frontend (Nginx Production Server)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
+      - "80:80"
       - "3007:80"
       - "3010:80"
     depends_on:
@@ -33,6 +34,7 @@ services:
       - eureka-server
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
     networks:
       - app-network
 
@@ -42,7 +44,7 @@ services:
       context: ./backend/application-service
       dockerfile: Dockerfile
     ports:
-      - "8083:8083"
+      - "127.0.0.1:8083:8083"
     environment:
       - JWT_SECRET=${JWT_SECRET:-myProdSecret}
       - SPRING_PROFILES_ACTIVE=prod
@@ -57,11 +59,11 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=applicationdb
-      - POSTGRES_USER=app_user
-      - POSTGRES_PASSWORD=StrongPassword123
+      - POSTGRES_DB=${POSTGRES_DB:-applicationdb}
+      - POSTGRES_USER=${POSTGRES_USER:-app_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-StrongPassword123}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -72,7 +74,7 @@ services:
       context: ./backend/interview-service
       dockerfile: Dockerfile
     ports:
-      - "8089:8089"
+      - "127.0.0.1:8089:8089"
     depends_on:
       - mysql
       - eureka-server
@@ -90,7 +92,7 @@ services:
       context: ./backend/auth-service
       dockerfile: Dockerfile
     ports:
-      - "8085:8085"
+      - "127.0.0.1:8085:8085"
     depends_on:
       - mysql
       - eureka-server
@@ -108,7 +110,7 @@ services:
       context: ./backend/job-service
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     depends_on:
       - mysql
       - eureka-server
@@ -127,7 +129,7 @@ services:
       context: ./backend/profile-service
       dockerfile: Dockerfile
     ports:
-      - "8082:8082"
+      - "127.0.0.1:8082:8082"
     depends_on:
       - mysql
       - eureka-server
@@ -141,22 +143,36 @@ services:
     networks:
       - app-network
 
+  # Analytics Service
+  analytics-service:
+    build:
+      context: ./backend/analytics-service
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8088:8088"
+    depends_on:
+      - eureka-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks:
+      - app-network
+
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
     networks:
       - app-network
 
   mailhog:
     image: mailhog/mailhog
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
     networks:
       - app-network
 
@@ -165,7 +181,7 @@ services:
       context: ./backend/notification-service
       dockerfile: Dockerfile
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     depends_on:
       - rabbitmq
       - mailhog
@@ -191,11 +207,11 @@ services:
   mysql:
     image: mysql:8.0
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     environment:
       MYSQL_DATABASE: subscriptiondb
       MYSQL_USER: sub_user
-      MYSQL_PASSWORD: SubPass123
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-SubPass123}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Amitrai1001@}
     command: --default-authentication-plugin=mysql_native_password
     volumes:
@@ -209,7 +225,7 @@ services:
       context: ./backend/subscription-service
       dockerfile: Dockerfile
     ports:
-      - "8087:8087"
+      - "127.0.0.1:8087:8087"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/subscriptiondb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
@@ -218,8 +234,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-guest}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-guest}
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_YourKeyHere}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-YourSecretHere}
     depends_on:
@@ -229,11 +245,11 @@ services:
     networks:
       - app-network
 
-  # phpMyAdmin for automatic Database visualization
+  # phpMyAdmin for automatic Database visualization (bound to localhost)
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
-      - "8090:80"
+      - "127.0.0.1:8090:80"
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
@@ -249,3 +265,4 @@ volumes:
 networks:
   app-network:
     driver: bridge
+
