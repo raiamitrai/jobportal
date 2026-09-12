@@ -190,7 +190,7 @@ export function initCrossBrowserPricingSync() {
         signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
       }).catch(() => null);
 
-      if (res && res.ok) {
+      if (res && res.ok && res.headers.get('content-type')?.includes('application/json')) {
         const serverOverrides = await res.json();
         if (serverOverrides && typeof serverOverrides === 'object' && Object.keys(serverOverrides).length > 0) {
           const currentStr = localStorage.getItem(PLANS_STORAGE_KEY);
@@ -210,7 +210,7 @@ export function initCrossBrowserPricingSync() {
         signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
       }).catch(() => null);
 
-      if (cRes && cRes.ok) {
+      if (cRes && cRes.ok && cRes.headers.get('content-type')?.includes('application/json')) {
         const serverCoupons = await cRes.json();
         if (Array.isArray(serverCoupons) && serverCoupons.length > 0) {
           const currentCStr = localStorage.getItem(COUPONS_STORAGE_KEY);

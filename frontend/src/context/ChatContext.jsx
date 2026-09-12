@@ -143,7 +143,7 @@ export function ChatProvider({ children }) {
         signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
       }).catch(() => null);
 
-      if (res && res.ok) {
+      if (res && res.ok && res.headers.get('content-type')?.includes('application/json')) {
         const serverThreads = await res.json();
         if (Array.isArray(serverThreads)) {
           setThreads(prev => {

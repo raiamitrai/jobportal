@@ -197,13 +197,13 @@ export function JobProvider({ children }) {
       try {
         let incomingJobs = [];
 
-        // 1. Fetch from Vite Central Server (/api/shared-jobs)
+        // 1. Fetch from Server Shared Jobs (if endpoint available)
         try {
           const sRes = await fetch('/api/shared-jobs', {
             headers: { 'Accept': 'application/json' },
             signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
           }).catch(() => null);
-          if (sRes && sRes.ok) {
+          if (sRes && sRes.ok && sRes.headers.get('content-type')?.includes('application/json')) {
             const sData = await sRes.json();
             if (Array.isArray(sData) && sData.length > 0) {
               incomingJobs = [...incomingJobs, ...sData];
@@ -317,7 +317,7 @@ export function JobProvider({ children }) {
           signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(2000) : undefined
         }).catch(() => null);
 
-        if (res && res.ok) {
+        if (res && res.ok && res.headers.get('content-type')?.includes('application/json')) {
           const serverApps = await res.json();
           if (Array.isArray(serverApps)) {
             let localApps = [];
