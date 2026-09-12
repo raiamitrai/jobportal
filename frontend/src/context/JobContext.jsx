@@ -554,10 +554,44 @@ export function JobProvider({ children }) {
         body: JSON.stringify(updatedJobs)
       }).catch(() => {});
     } catch (e) {}
+
+    // Dispatch to real Spring Boot job-service via API Gateway
+    try {
+      fetch(ENDPOINTS.jobs(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user?.token ? { 'Authorization': `Bearer ${user.token}` } : {})
+        },
+        body: JSON.stringify({
+          title: jobData.title,
+          category: jobData.category || 'Technology',
+          type: (jobData.type || 'FULL_TIME').toUpperCase().replace('-', '_').replace(' ', '_'),
+          location: jobData.location || 'India',
+          companyName: newJob.company,
+          description: `${jobData.title} at ${newJob.company}. Experience: ${jobData.experience || '0-2 Yrs'}`,
+          salaryMin: 500000,
+          salaryMax: 1500000,
+          skills: Array.isArray(newJob.skills) ? newJob.skills : ['General'],
+          experienceRequired: parseInt(jobData.experience, 10) || 1,
+          postedBy: user?.userId || 1,
+          status: newJob.status || 'ACTIVE'
+        })
+      }).then(async res => {
+        if (res.ok) {
+          const created = await res.json();
+          if (created?.jobId) {
+            newJob.backendId = created.jobId;
+          }
+        }
+      }).catch(() => {});
+    } catch (_) {}
+
     broadcastSync('JOBS_UPDATED', updatedJobs);
 
     return newJob;
   };
+
 
   const updateJob = (jobId, updatedData) => {
     const currencySymbol = updatedData.currency === 'USD' ? '$' : '₹';
@@ -820,11 +854,38 @@ export function JobProvider({ children }) {
         body: JSON.stringify(updatedApps)
       }).catch(() => {});
     } catch (e) {}
+
+    // Dispatch to real Spring Boot application-service via API Gateway
+    try {
+      fetch(ENDPOINTS.applications(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user?.token ? { 'Authorization': `Bearer ${user.token}` } : {})
+        },
+        body: JSON.stringify({
+          jobId: typeof jobId === 'number' ? jobId : (parseInt(jobId, 10) || 1),
+          candidateId: user?.userId || 1,
+          coverLetter: applicationDetails.coverNote || 'Application submitted via Careonix Job Portal',
+          resumeUrl: candResumeName || 'resume.pdf',
+          status: 'APPLIED'
+        })
+      }).then(async res => {
+        if (res.ok) {
+          const created = await res.json();
+          if (created?.id) {
+            newApp.backendId = created.id;
+          }
+        }
+      }).catch(() => {});
+    } catch (_) {}
+
     broadcastSync('JOBS_UPDATED', updatedJobs);
     broadcastSync('APPLICATIONS_UPDATED', updatedApps);
 
     return newApp;
   };
+
 
   const updateJobStatusByAdmin = (jobId, newStatus) => {
     updateJobStatus(jobId, newStatus);

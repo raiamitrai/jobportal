@@ -489,6 +489,42 @@ export default function LoginPage({ onBack, defaultIsRegister = false }) {
       (u.email || u.identifier || '').toLowerCase().trim() === emailLower
     );
 
+    // ── Real Backend Authentication (Spring Boot auth-service via API Gateway) ──
+    try {
+      const authRes = await fetch(ENDPOINTS.auth('/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailLower, password: inputPass })
+      });
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        if (authData?.accessToken) {
+          localStorage.removeItem(attemptsKey);
+          localStorage.removeItem(lockoutKey);
+          recordLoginEvent(emailLower);
+          const backendRole = (authData.role || '').toUpperCase();
+          const resolvedType = backendRole === 'RECRUITER' ? 'recruiter' : (backendRole === 'ADMIN' ? 'admin' : (userAccountType || 'candidate'));
+          const resolvedName = (authData.firstName ? `${authData.firstName} ${authData.lastName || ''}`.trim() : (existingUser?.name || emailLower.split('@')[0]));
+          const loggedInUser = {
+            email: emailLower,
+            name: resolvedName,
+            role: backendRole === 'ADMIN' ? 'admin' : 'client',
+            accountType: resolvedType,
+            company: existingUser?.company || null,
+            token: authData.accessToken,
+            refreshToken: authData.refreshToken,
+            userId: authData.userId,
+            approvalStatus: 'APPROVED'
+          };
+          login(loggedInUser);
+          return;
+        }
+      }
+    } catch (_) {
+      // Backend unreachable: fallback smoothly to local check below for resilience
+    }
+
+
     if (!existingUser && !deletedList.includes(emailLower)) {
       try {
         const res = await fetch(ENDPOINTS.profiles(`/email?email=${encodeURIComponent(emailLower)}`));

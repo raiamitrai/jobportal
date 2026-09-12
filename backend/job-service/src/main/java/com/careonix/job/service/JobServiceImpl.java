@@ -26,17 +26,20 @@ public class JobServiceImpl implements JobService {
                 .category(dto.getCategory())
                 .type(dto.getType())
                 .location(dto.getLocation())
+                .companyName(dto.getCompanyName())
+                .description(dto.getDescription())
                 .salaryMin(dto.getSalaryMin())
                 .salaryMax(dto.getSalaryMax())
                 .skills(dto.getSkills())
                 .experienceRequired(dto.getExperienceRequired())
-                .postedBy(dto.getPostedBy())
+                .postedBy(dto.getPostedBy() != null ? dto.getPostedBy() : 1L)
                 .status(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "ACTIVE")
                 .build();
 
         Job savedJob = jobRepository.save(job);
         return mapToResponseDto(savedJob);
     }
+
 
     @Override
     public List<JobResponseDto> getAllJobs() {
@@ -104,11 +107,13 @@ public class JobServiceImpl implements JobService {
         job.setCategory(dto.getCategory());
         job.setType(dto.getType());
         job.setLocation(dto.getLocation());
+        if (dto.getCompanyName() != null) job.setCompanyName(dto.getCompanyName());
+        if (dto.getDescription() != null) job.setDescription(dto.getDescription());
         job.setSalaryMin(dto.getSalaryMin());
         job.setSalaryMax(dto.getSalaryMax());
         job.setSkills(dto.getSkills());
         job.setExperienceRequired(dto.getExperienceRequired());
-        job.setPostedBy(dto.getPostedBy());
+        if (dto.getPostedBy() != null) job.setPostedBy(dto.getPostedBy());
         if (dto.getStatus() != null) {
             job.setStatus(dto.getStatus().toUpperCase());
         }
@@ -133,6 +138,8 @@ public class JobServiceImpl implements JobService {
                 .category(job.getCategory())
                 .type(job.getType())
                 .location(job.getLocation())
+                .companyName(job.getCompanyName())
+                .description(job.getDescription())
                 .salaryMin(job.getSalaryMin())
                 .salaryMax(job.getSalaryMax())
                 .skills(job.getSkills())
@@ -142,5 +149,6 @@ public class JobServiceImpl implements JobService {
                 .postedAt(job.getPostedAt())
                 .build();
     }
+
 }
 

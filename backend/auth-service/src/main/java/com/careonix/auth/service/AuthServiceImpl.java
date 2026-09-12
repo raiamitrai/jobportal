@@ -33,27 +33,40 @@ public class AuthServiceImpl implements AuthService {
             throw new UserAlreadyExistsException(request.getEmail());
         }
         User user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(request.getEmail().toLowerCase().trim());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setRole(UserRole.CANDIDATE);
+        
+        UserRole userRole = UserRole.CANDIDATE;
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+            try {
+                userRole = UserRole.valueOf(request.getRole().trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+        user.setRole(userRole);
         userRepo.save(user);
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userRepo.findByEmail(request.getEmail())
+        User user = userRepo.findByEmail(request.getEmail().toLowerCase().trim())
                 .orElseThrow(() -> new InvalidCredentialsException());
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
-        String accessToken = jwtService.generateToken(user.getEmail(), user.getRole().name(), user.getId());
+        String roleStr = user.getRole() != null ? user.getRole().name() : "CANDIDATE";
+        String accessToken = jwtService.generateToken(user.getEmail(), roleStr, user.getId());
         RefreshToken refreshToken = createRefreshToken(user);
         AuthResponse resp = new AuthResponse();
         resp.setAccessToken(accessToken);
         resp.setRefreshToken(refreshToken.getToken());
         resp.setExpiresIn(accessExpMinutes * 60);
+        resp.setUserId(user.getId());
+        resp.setEmail(user.getEmail());
+        resp.setRole(roleStr);
+        resp.setFirstName(user.getFirstName());
+        resp.setLastName(user.getLastName());
         return resp;
     }
 
@@ -65,13 +78,20 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidRefreshTokenException();
         }
         User user = stored.getUser();
-        String newAccess = jwtService.generateToken(user.getEmail(), user.getRole().name(), user.getId());
+        String roleStr = user.getRole() != null ? user.getRole().name() : "CANDIDATE";
+        String newAccess = jwtService.generateToken(user.getEmail(), roleStr, user.getId());
         AuthResponse resp = new AuthResponse();
         resp.setAccessToken(newAccess);
         resp.setRefreshToken(stored.getToken());
         resp.setExpiresIn(accessExpMinutes * 60);
+        resp.setUserId(user.getId());
+        resp.setEmail(user.getEmail());
+        resp.setRole(roleStr);
+        resp.setFirstName(user.getFirstName());
+        resp.setLastName(user.getLastName());
         return resp;
     }
+
 
     @Override
     public void logout(String token) {

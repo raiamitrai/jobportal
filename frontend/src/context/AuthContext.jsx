@@ -388,6 +388,26 @@ export function AuthProvider({ children }) {
     const updated = [...currentList, newUser];
     saveRegisteredUsers(updated);
 
+    // Real Backend Integration: Dispatch registration to Spring Boot auth-service via API Gateway
+    try {
+      const nameParts = (providedName || '').trim().split(' ');
+      const firstName = nameParts[0] || (cleanId.split('@')[0]);
+      const lastName = nameParts.slice(1).join(' ') || '';
+      const role = (typeof userData === 'object' && userData.accountType ? userData.accountType : 'candidate').toUpperCase();
+
+      fetch(ENDPOINTS.auth('/register'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanId,
+          password: password,
+          firstName,
+          lastName,
+          role
+        })
+      }).catch(err => console.log('Backend auth-service registration note:', err.message));
+    } catch (e) {}
+
     // Async sync via profile-service (through API Gateway)
     try {
       fetch(ENDPOINTS.profiles('/register'), {
@@ -399,6 +419,7 @@ export function AuthProvider({ children }) {
 
     return newUser;
   };
+
 
   const findUserByEmail = (identifier) => {
     const cleanId = (identifier || '').toLowerCase().trim();

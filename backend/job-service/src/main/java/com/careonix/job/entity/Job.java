@@ -32,7 +32,13 @@ public class Job {
     @Column(nullable = false)
     private String location;
 
+    private String companyName;
+
+    @Column(length = 4000)
+    private String description;
+
     private double salaryMin;
+
     private double salaryMax;
 
     @ElementCollection

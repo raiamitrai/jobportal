@@ -24,14 +24,17 @@ public class JobRequestDto {
     @NotBlank(message = "Job location is required")
     private String location;
 
+    private String companyName;
+    private String description;
+
     private double salaryMin;
     private double salaryMax;
     private List<String> skills;
     private int experienceRequired;
 
-    @NotNull(message = "Recruiter profile ID is required")
     private Long postedBy;
 
     private String status; // ACTIVE, PAUSED, CLOSED
 }
+
 

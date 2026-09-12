@@ -15,6 +15,8 @@ public class JobResponseDto {
     private String category;
     private String type;
     private String location;
+    private String companyName;
+    private String description;
     private double salaryMin;
     private double salaryMax;
     private List<String> skills;
@@ -23,4 +25,5 @@ public class JobResponseDto {
     private String status;
     private LocalDate postedAt;
 }
+
 
