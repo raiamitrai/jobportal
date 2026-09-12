@@ -118,14 +118,14 @@ export default function OAuthCallbackPage() {
 
     const handleOAuthCallback = async () => {
       const settings = getSettings()?.integrations || {};
-      const clientId = (settings.githubClientId || 'Ov23li7BdZOdL1WhHgNg').trim();
-      const clientSecret = (settings.githubClientSecret || '70eb4d8c8ab215a7b81ebf4c976f61a057e933e6').trim();
+      const clientId = (settings.githubClientId || import.meta.env.VITE_GITHUB_CLIENT_ID || 'Ov23li7BdZOdL1WhHgNg').trim();
+      const clientSecret = (settings.githubClientSecret || import.meta.env.VITE_GITHUB_CLIENT_SECRET || '').trim();
       const redirectUri = `${window.location.origin}/auth/callback/github`;
 
       let accessToken = null;
       let githubError = '';
 
-      // ── Step 1: Vite dev server proxy (no CORS, fastest) ──────────────────
+      // ── Step 1: Vite dev server proxy ─────────────────────────────────────
       try {
         const res = await fetchWithTimeout('/api/github-oauth', {
           method: 'POST',
@@ -135,47 +135,40 @@ export default function OAuthCallbackPage() {
 
         if (res.ok) {
           const data = await res.json();
-          console.log('[OAuth] Vite proxy response:', data);
           if (data.access_token) {
             accessToken = data.access_token;
           } else if (data.error) {
             githubError = data.error_description || data.error;
-            console.warn('[OAuth] GitHub rejected code:', githubError);
           }
-        } else {
-          console.warn('[OAuth] Vite proxy HTTP error:', res.status);
         }
       } catch (e) {
-        if (e.name === 'AbortError') {
-          console.warn('[OAuth] Vite proxy timed out — trying CORS proxy');
-        } else {
-          console.warn('[OAuth] Vite proxy error:', e.message);
-        }
+        // Dev proxy unavailable, try backend
       }
 
-      // ── Step 2: Public CORS proxy fallback (only if no error from GitHub) ─
+      // ── Step 2: Backend Auth Service / Gateway fallback ───────────────────
       if (!accessToken && !githubError) {
-        try {
-          const res = await fetchWithTimeout(
-            'https://corsproxy.io/?url=https://github.com/login/oauth/access_token',
-            {
+        const authCandidates = [
+          '/auth/oauth/github',
+          '/api/auth/oauth/github',
+          'http://localhost:8080/auth/oauth/github',
+          'http://localhost:8085/auth/oauth/github'
+        ];
+        for (const authUrl of authCandidates) {
+          try {
+            const res = await fetchWithTimeout(authUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri })
-            },
-            10000
-          );
-          if (res.ok) {
-            const data = await res.json();
-            console.log('[OAuth] CORS proxy response:', data);
-            if (data.access_token) {
-              accessToken = data.access_token;
-            } else if (data.error) {
-              githubError = data.error_description || data.error;
+              body: JSON.stringify({ clientId, clientSecret, code })
+            }, 8000);
+
+            if (res.ok) {
+              const userProfile = await res.json();
+              if (userProfile && (userProfile.id || userProfile.login)) {
+                completeLoginWithUser(userProfile);
+                return;
+              }
             }
-          }
-        } catch (e) {
-          console.warn('[OAuth] CORS proxy error:', e.message);
+          } catch (_) {}
         }
       }
 

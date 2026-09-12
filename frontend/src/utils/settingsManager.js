@@ -139,7 +139,7 @@ export const DEFAULT_SETTINGS = {
     googleEnabled: true,
     githubEnabled: true,
     githubClientId: 'Ov23li7BdZOdL1WhHgNg',
-    githubClientSecret: '70eb4d8c8ab215a7b81ebf4c976f61a057e933e6',
+    githubClientSecret: '',
     linkedinEnabled: false,
     linkedInClientId: '',
     linkedInClientSecret: '',
